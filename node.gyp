@@ -57,10 +57,11 @@
       'type': 'executable',
 
       'dependencies': [
+        'deps/botan/botan.gyp:botan',
+        'deps/ffi/ffi.gyp:ffi',
         'deps/http_parser/http_parser.gyp:http_parser',
         'deps/uv/uv.gyp:uv',
         'node_js2c#host',
-        'deps/ffi/ffi.gyp:ffi',
       ],
 
       'include_dirs': [
@@ -74,9 +75,11 @@
         'src/cares_wrap.cc',
         'src/handle_wrap.cc',
         'src/node.cc',
+        'src/node_botan.cc',
         'src/node_buffer.cc',
         'src/node_constants.cc',
         'src/node_extensions.cc',
+        'src/node_ffi.cc',
         'src/node_file.cc',
         'src/node_http_parser.cc',
         'src/node_javascript.cc',
@@ -98,10 +101,12 @@
         # headers to make for a more pleasant IDE experience
         'src/handle_wrap.h',
         'src/node.h',
+        'src/node_botan.h',
         'src/node_buffer.h',
         'src/node_constants.h',
         'src/node_crypto.h',
         'src/node_extensions.h',
+        'src/node_ffi.h',
         'src/node_file.h',
         'src/node_http_parser.h',
         'src/node_javascript.h',
