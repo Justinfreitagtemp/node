@@ -2,7 +2,7 @@
   'targets': [
     {
       'target_name': 'botan',
-      'type': 'static_library',
+      'type': '<(library)',
       'include_dirs': [
         'build/include',
       ],
