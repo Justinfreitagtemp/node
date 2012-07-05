@@ -58,7 +58,7 @@
 
       'dependencies': [
         'deps/botan/botan.gyp:botan',
-        'deps/botan/desktop.gyp:desktop',
+        'deps/desktop/desktop.gyp:desktop',
         'deps/http_parser/http_parser.gyp:http_parser',
         'deps/uv/uv.gyp:uv',
         'node_js2c#host',
