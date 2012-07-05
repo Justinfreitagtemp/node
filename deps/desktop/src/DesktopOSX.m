@@ -20,7 +20,7 @@
 }
 @end
 
-int main () {
+void init () {
   [NSAutoreleasePool new];
   [NSApplication sharedApplication];
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
@@ -48,6 +48,5 @@ int main () {
   [window makeKeyAndOrderFront:nil];
   [NSApp activateIgnoringOtherApps:YES];
   [NSApp run];
-  return 0;
 }
 
