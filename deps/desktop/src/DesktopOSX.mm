@@ -21,7 +21,7 @@
 }
 @end
 
-void desktopInit (void) {
+void desktopInit () {
   [NSAutoreleasePool new];
   [NSApplication sharedApplication];
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];

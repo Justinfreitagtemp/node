@@ -21,9 +21,8 @@
 
 
 NODE_EXT_LIST_START
-//NODE_EXT_LIST_ITEM(node_botan)
+NODE_EXT_LIST_ITEM(node_botan)
 NODE_EXT_LIST_ITEM(node_buffer)
-NODE_EXT_LIST_ITEM(node_desktop)
 NODE_EXT_LIST_ITEM(node_typed_array)
 #if HAVE_OPENSSL
 NODE_EXT_LIST_ITEM(node_crypto)

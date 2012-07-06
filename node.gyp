@@ -57,7 +57,7 @@
       'type': 'executable',
 
       'dependencies': [
-        # 'deps/botan/botan.gyp:botan',
+        'deps/botan/botan.gyp:botan',
         'deps/desktop/desktop.gyp:desktop',
         'deps/http_parser/http_parser.gyp:http_parser',
         'deps/uv/uv.gyp:uv',
@@ -75,7 +75,7 @@
         'src/cares_wrap.cc',
         'src/handle_wrap.cc',
         'src/node.cc',
-        # 'src/node_botan.cc',
+        'src/node_botan.cc',
         'src/node_buffer.cc',
         'src/node_constants.cc',
         'src/node_desktop.cc',
@@ -83,7 +83,7 @@
         'src/node_file.cc',
         'src/node_http_parser.cc',
         'src/node_javascript.cc',
-        'src/node_main.cc',
+        # 'src/node_main.cc',
         'src/node_os.cc',
         'src/node_script.cc',
         'src/node_stat_watcher.cc',
@@ -101,7 +101,7 @@
         # headers to make for a more pleasant IDE experience
         'src/handle_wrap.h',
         'src/node.h',
-        # 'src/node_botan.h',
+        'src/node_botan.h',
         'src/node_buffer.h',
         'src/node_constants.h',
         'src/node_crypto.h',
