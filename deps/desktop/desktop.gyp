@@ -10,6 +10,12 @@
         'include_dirs': [
           'src',
         ],
+        'cflags_cc': [
+          '-x objective-c++',
+        ],
+        'cflags': [
+          '-x objective-c++',
+        ],
       },
       'sources': [
         'src/Desktop.h',
@@ -22,21 +28,19 @@
         '-ffast-math',
         '-Wall',
       ],
-      'link_settings': {
-        'libraries': [
-          '-lz',
-        ],
-      },
       'conditions': [
         ['OS=="mac"', {
           'sources': [
-            'src/DesktopOSX.m',
+            'src/DesktopOSX.mm',
           ],
           'direct_dependent_settings': {
             'libraries': [
-              '$(SDKROOT)/System/Library/Frameworks/Cocoa.framework',
-              '$(SDKROOT)/System/Library/Frameworks/Webkit.framework',
+              '-framework Cocoa',
+              '-framework Webkit',
             ],
+          },
+          'xcode_settings': {
+            'ARCHS': ['x86_64'],
           },
         }],
       ]

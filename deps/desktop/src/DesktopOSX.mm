@@ -1,5 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import <Webkit/Webkit.h>
+#include "Desktop.h"
 
 @interface LoqurWebView : WebView {}
 - (id)initWithFrame:(NSRect)frameRect;
@@ -20,7 +21,7 @@
 }
 @end
 
-void init () {
+void desktopInit (void) {
   [NSAutoreleasePool new];
   [NSApplication sharedApplication];
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
@@ -40,7 +41,7 @@ void init () {
     backing:NSBackingStoreBuffered defer:NO] autorelease];
   [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
   WebView *webView;
-  webView = [[LoqurWebView alloc] initWithFrame:CGRectMake(0, 0, 800, 600)];
+  webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 800, 600))];
   webView.autoresizesSubviews = YES;
   [window setContentView:webView];
   [webView release];
