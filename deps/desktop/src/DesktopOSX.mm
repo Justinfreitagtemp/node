@@ -31,13 +31,8 @@ static id window;
 
 @interface LoqurWindow : NSWindow {}
 - (id)initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle backing:(NSBackingStoreType)bufferingType defer:(BOOL)deferCreation;
+- (void)close;
 @end
-
-@implementation LoqurWindow
-- (id)initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle backing:(NSBackingStoreType)bufferingType defer:(BOOL)deferCreation {
-  self = [super initWithContentRect:contentRect styleMask:windowStyle backing:bufferingType defer:deferCreation];
-  return self;
-}
 
 @end
 
@@ -45,7 +40,7 @@ void desktopInit () {
   [NSAutoreleasePool new];
   [NSApplication sharedApplication];
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-  window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
+  window = [[[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
     styleMask:(NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask)
     backing:NSBackingStoreBuffered defer:NO] autorelease];
   [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
@@ -64,9 +59,9 @@ void desktopInit () {
   id quitMenuItem = [[[NSMenuItem alloc] initWithTitle:@"Quit"
     action:@selector(terminate:) keyEquivalent:@"q"] autorelease];
   [appMenu addItem:quitMenuItem];
-  id closeMenuItem = [[[NSMenuItem alloc] initWithTitle:@"Close"
-    action:@selector(close) keyEquivalent:@"w"] autorelease];
-  [closeMenuItem setTarget:window];
+  id closeMenuItem = [[[NSMenuItem alloc] initWithTitle:@"Hide"
+    action:@selector(hide) keyEquivalent:@"w"] autorelease];
+  [closeMenuItem setTarget:[NSRunningApplication currentApplication]];
   [appMenu addItem:closeMenuItem];
   [appMenuItem setSubmenu:appMenu];
   [NSApp activateIgnoringOtherApps:YES];
