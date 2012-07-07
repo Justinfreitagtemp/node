@@ -19,7 +19,6 @@
   [prefs setJavaScriptEnabled:YES];
   [prefs setPlugInsEnabled:NO];
   [prefs setPrivateBrowsingEnabled:YES];
-  [self setMainFrameURL:@"http://www.google.com"];
   return self;
 }
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems {
@@ -27,30 +26,14 @@
 }
 @end
 
-static id window;
+void statusBarInit() {
+  id statusItem = [[[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength] retain];
+  id defaultImage = [[NSImage new] initWithContentsOfFile:@"images/default.png"];
+  [statusItem setImage:defaultImage];
+  [statusItem setHighlightMode:YES];
+}
 
-@interface LoqurWindow : NSWindow {}
-- (id)initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle backing:(NSBackingStoreType)bufferingType defer:(BOOL)deferCreation;
-- (void)close;
-@end
-
-@end
-
-void desktopInit () {
-  [NSAutoreleasePool new];
-  [NSApplication sharedApplication];
-  [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-  window = [[[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
-    styleMask:(NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask)
-    backing:NSBackingStoreBuffered defer:NO] autorelease];
-  [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
-  WebView *webView;
-  webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 800, 600))];
-  webView.autoresizesSubviews = YES;
-  [window setContentView:webView];
-  [webView release];
-  [window setTitle:@"loqur."];
-  [window makeKeyAndOrderFront:nil];
+void menuBarInit() {
   id menubar = [[NSMenu new] autorelease];
   id appMenuItem = [[NSMenuItem new] autorelease];
   [menubar addItem:appMenuItem];
@@ -64,6 +47,30 @@ void desktopInit () {
   [closeMenuItem setTarget:[NSRunningApplication currentApplication]];
   [appMenu addItem:closeMenuItem];
   [appMenuItem setSubmenu:appMenu];
+}
+
+void windowInit() {
+ id window = [[[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
+    styleMask:(NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask)
+    backing:NSBackingStoreBuffered defer:NO] autorelease];
+  [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
+  WebView *webView;
+  webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 800, 600))];
+  webView.autoresizesSubviews = YES;
+  [webView setMainFrameURL:@"file:///Users/justin/dev/node/deps/desktop/html/index.html"];
+  [window setContentView:webView];
+  [webView release];
+  [window setTitle:@"loqur."];
+  [window makeKeyAndOrderFront:nil];
+}
+
+void desktopInit () {
+  [NSAutoreleasePool new];
+  [NSApplication sharedApplication];
+  [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+  menuBarInit();
+  statusBarInit();
+  windowInit();
   [NSApp activateIgnoringOtherApps:YES];
   [NSApp run];
 }
