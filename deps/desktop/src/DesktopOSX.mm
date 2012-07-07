@@ -57,7 +57,9 @@ void windowInit() {
   WebView *webView;
   webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 800, 600))];
   webView.autoresizesSubviews = YES;
-  [webView setMainFrameURL:@"file:///Users/justin/dev/node/deps/desktop/html/index.html"];
+  NSString *resourcesPath = [[NSBundle mainBundle] resourcePath];
+  NSString *htmlPath = [resourcesPath stringByAppendingString:@"/deps/desktop/html/index.html"];
+  [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:[NSURL fileURLWithPath:htmlPath]]];
   [window setContentView:webView];
   [webView release];
   [window setTitle:@"loqur."];
