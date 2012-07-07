@@ -19,10 +19,31 @@
   [prefs setJavaScriptEnabled:YES];
   [prefs setPlugInsEnabled:NO];
   [prefs setPrivateBrowsingEnabled:YES];
+  [self registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
   return self;
 }
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems {
   return nil;
+}
+- (NSUInteger)webView:(WebView *)sender dragDestinationActionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo {
+    return WebDragDestinationActionDHTML;
+}
+- (NSUInteger)webView:(WebView *)sender dragSourceActionMaskForPoint:(NSPoint)point {
+  return WebDragSourceActionDHTML;
+}
+- (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)sender{
+    return NSDragOperationCopy;
+}
+- (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender {
+    return NSDragOperationEvery;
+}
+- (void)draggingExited:(id <NSDraggingInfo>)sender {
+}
+- (BOOL)prepareForDragOperation:(id <NSDraggingInfo>)sender  {
+    return YES;
+}
+- (BOOL)performDragOperation:(id <NSDraggingInfo>)sender {
+    return YES;
 }
 @end
 
