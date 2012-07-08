@@ -2,7 +2,7 @@
 #import <Webkit/Webkit.h>
 #include "Desktop.h"
 
-@interface LoqurWebView : WebView {}
+@interface LoqurWebView : WebView
 - (id)initWithFrame:(NSRect)frameRect;
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems;
 @end
