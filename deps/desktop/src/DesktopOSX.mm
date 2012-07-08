@@ -45,6 +45,21 @@
 - (BOOL)performDragOperation:(id <NSDraggingInfo>)sender {
     return YES;
 }
+- (void)concludeDragOperation:(id <NSDraggingInfo>)sender{
+    NSArray *draggedFilenames = [[sender draggingPasteboard] propertyListForType:NSFilenamesPboardType];
+    for (id object in draggedFilenames) {
+      NSURL *url = [NSURL fileURLWithPath:object];
+      NSData *bookmark = nil;
+      NSError *error = nil;
+      bookmark = [url bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
+                      includingResourceValuesForKeys:nil relativeToURL:nil error:&error];
+      if (error) {
+        NSLog(@"Error creating bookmark for URL (%@): %@", url, error);
+        [NSApp presentError:error];
+      }
+      NSLog(@"bookmark: %@", bookmark);
+    }
+}
 @end
 
 void statusBarInit() {
