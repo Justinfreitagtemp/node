@@ -2,6 +2,8 @@
 #import <Webkit/Webkit.h>
 #include "Desktop.h"
 
+BOOL addSecurityBookmark (NSURL*url);
+
 @interface LoqurWebView : WebView
 - (id)initWithFrame:(NSRect)frameRect;
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems;
@@ -26,41 +28,83 @@
   return nil;
 }
 - (NSUInteger)webView:(WebView *)sender dragDestinationActionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo {
-    return WebDragDestinationActionDHTML;
+  return WebDragDestinationActionDHTML;
 }
 - (NSUInteger)webView:(WebView *)sender dragSourceActionMaskForPoint:(NSPoint)point {
   return WebDragSourceActionDHTML;
 }
 - (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)sender{
-    return NSDragOperationCopy;
+  return NSDragOperationCopy;
 }
 - (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender {
-    return NSDragOperationEvery;
+  return NSDragOperationEvery;
 }
 - (void)draggingExited:(id <NSDraggingInfo>)sender {
 }
 - (BOOL)prepareForDragOperation:(id <NSDraggingInfo>)sender  {
-    return YES;
+  return YES;
 }
 - (BOOL)performDragOperation:(id <NSDraggingInfo>)sender {
-    return YES;
+  return YES;
 }
 - (void)concludeDragOperation:(id <NSDraggingInfo>)sender{
-    NSArray *draggedFilenames = [[sender draggingPasteboard] propertyListForType:NSFilenamesPboardType];
-    for (id object in draggedFilenames) {
-      NSURL *url = [NSURL fileURLWithPath:object];
-      NSData *bookmark = nil;
-      NSError *error = nil;
-      bookmark = [url bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope
-                      includingResourceValuesForKeys:nil relativeToURL:nil error:&error];
-      if (error) {
-        NSLog(@"Error creating bookmark for URL (%@): %@", url, error);
-        [NSApp presentError:error];
-      }
-      NSLog(@"bookmark: %@", bookmark);
-    }
+  NSArray *draggedFilenames = [[sender draggingPasteboard] propertyListForType:NSFilenamesPboardType];
+  for (id filename in draggedFilenames) {
+    NSURL *url = [NSURL fileURLWithPath:filename];
+    addSecurityBookmark(url);
+  }
 }
 @end
+
+void addFiles() {
+  NSOpenPanel *openDlg = [NSOpenPanel openPanel];
+  [openDlg setPrompt:@"Choose files or folders to add"];
+  [openDlg setTitle:@"Title"];
+  [openDlg setAllowsMultipleSelection:YES];
+  [openDlg setShowsHiddenFiles:YES];
+  [openDlg setCanChooseDirectories:YES];
+  [openDlg setCanChooseFiles:YES];
+  for (id url in [openDlg URLs]) {
+    addSecurityBookmark(url);
+  }
+}
+
+BOOL addSecurityBookmark (NSURL* url) {
+  NSError *error = nil;
+  NSData *bookmarkData = [url bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:&error];
+  if (error || (bookmarkData == nil)) {
+    NSLog(@"Secure bookmark creation of %@ failed with error: %@",[url path],[error localizedDescription]);
+    return NO;
+  } else {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults]; 
+    NSMutableDictionary *sandboxedBookmarks = [NSMutableDictionary dictionaryWithDictionary:[defaults objectForKey:@"sandboxSecureBookmarks"]];        
+    [sandboxedBookmarks setObject:bookmarkData forKey:[url path]];
+    [defaults setObject:sandboxedBookmarks forKey:@"sandboxSecureBookmarks"];
+    [defaults synchronize];
+  }
+  return YES;
+}
+
+NSURL* getSecurityBookmark(NSURL* url) {
+  NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+  NSMutableDictionary *sandboxedBookmarks = [NSMutableDictionary dictionaryWithDictionary:[defaults objectForKey:@"sandboxSecureBookmarks"]];
+  NSData *bookmark = [sandboxedBookmarks objectForKey:[[url URLByDeletingLastPathComponent] path]];     //first see if we have a bookmark for the parent directory
+  if (bookmark == nil) bookmark = [sandboxedBookmarks objectForKey:[url path]];                         //if not then look for a bookmark of the exact file
+  if (bookmark) {
+    NSError *error = nil;
+    BOOL bookmarkIsStale = NO;
+    NSURL *bookmarkURL = [NSURL URLByResolvingBookmarkData:bookmark options:NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bookmarkIsStale error:&error]; 
+    if (bookmarkIsStale || (error != nil)) {
+      [sandboxedBookmarks removeObjectForKey:[url path]];
+      [defaults setObject:sandboxedBookmarks forKey:@"sandboxSecureBookmarks"];
+      [defaults synchronize];
+      NSLog(@"Secure bookmark was pruned, resolution of %@ failed with error: %@",[url path],[error localizedDescription]);
+    } else {
+      return bookmarkURL;
+    }
+  }
+  return nil;
+}
 
 void statusBarInit() {
   id statusItem = [[[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength] retain];
