@@ -7,6 +7,7 @@ BOOL addSecurityBookmark (NSURL*url);
 @interface LoqurWebView : WebView
 - (id)initWithFrame:(NSRect)frameRect;
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems;
+- (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame;
 @end
 
 @implementation LoqurWebView
@@ -14,7 +15,9 @@ BOOL addSecurityBookmark (NSURL*url);
   self = [super initWithFrame:frameRect];
   self.autoresizingMask = (NSViewHeightSizable | NSViewWidthSizable);
   [[[self mainFrame] frameView] setAllowsScrolling:NO];
+  [self setFrameLoadDelegate:self];
   [self setUIDelegate:self];
+  [self setMaintainsBackForwardList:NO];
   WebPreferences* prefs = [self preferences];
   [prefs setAutosaves:NO];
   [prefs setJavaEnabled:NO];
@@ -53,6 +56,25 @@ BOOL addSecurityBookmark (NSURL*url);
     NSURL *url = [NSURL fileURLWithPath:filename];
     addSecurityBookmark(url);
   }
+}
++ (NSString*)webScriptNameForSelector:(SEL)sel {
+  if(sel == @selector(logJavaScriptString:))
+    return @"log";
+  return nil;
+}
++ (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
+  if(sel == @selector(logJavaScriptString:))
+    return NO;
+  return YES;
+}
+- (void)logJavaScriptString:(NSString*) logText {
+  NSLog(@"JavaScript: %@",logText);
+}
+- (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
+  [windowScriptObject setValue:self forKey:@"Cocoa"];
+}
+- (void)sendMessage:(NSArray *)args {
+  [[self windowScriptObject] callWebScriptMethod:@"populateRepairFields" withArguments:args];
 }
 @end
 
