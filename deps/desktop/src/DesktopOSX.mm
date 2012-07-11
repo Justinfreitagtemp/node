@@ -167,8 +167,6 @@ void windowInit() {
   webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 800, 600))];
   webView.autoresizesSubviews = YES;
   NSString *resourcesPath = [[NSBundle mainBundle] resourcePath];
-  //NSString *htmlPath = [resourcesPath stringByAppendingString:@"/deps/desktop/html/index.html"];
-  //[[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:[NSURL fileURLWithPath:htmlPath]]];
   NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
   [NSURLRequest setAllowsAnyHTTPSCertificate:YES forHost:[url host]];
   [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:url]];
