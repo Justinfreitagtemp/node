@@ -4,6 +4,11 @@
 
 BOOL addSecurityBookmark (NSURL*url);
 
+@interface NSURLRequest (DummyInterface)
++ (BOOL)allowsAnyHTTPSCertificateForHost:(NSString*)host;
++ (void)setAllowsAnyHTTPSCertificate:(BOOL)allow forHost:(NSString*)host;
+@end
+
 @interface LoqurWebView : WebView
 - (id)initWithFrame:(NSRect)frameRect;
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems;
@@ -18,6 +23,7 @@ BOOL addSecurityBookmark (NSURL*url);
   [self setFrameLoadDelegate:self];
   [self setUIDelegate:self];
   [self setMaintainsBackForwardList:NO];
+  [self setDrawsBackground:NO];
   WebPreferences* prefs = [self preferences];
   [prefs setAutosaves:NO];
   [prefs setJavaEnabled:NO];
@@ -152,16 +158,20 @@ void menuBarInit() {
 }
 
 void windowInit() {
+ //NSUInteger windowStyle = NSBorderlessWindowMask;
+ NSUInteger windowStyle = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
  id window = [[[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
-    styleMask:(NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask)
-    backing:NSBackingStoreBuffered defer:NO] autorelease];
+    styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
   [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
   WebView *webView;
   webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 800, 600))];
   webView.autoresizesSubviews = YES;
   NSString *resourcesPath = [[NSBundle mainBundle] resourcePath];
-  NSString *htmlPath = [resourcesPath stringByAppendingString:@"/deps/desktop/html/index.html"];
-  [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:[NSURL fileURLWithPath:htmlPath]]];
+  //NSString *htmlPath = [resourcesPath stringByAppendingString:@"/deps/desktop/html/index.html"];
+  //[[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:[NSURL fileURLWithPath:htmlPath]]];
+  NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
+  [NSURLRequest setAllowsAnyHTTPSCertificate:YES forHost:[url host]];
+  [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:url]];
   [window setContentView:webView];
   [webView release];
   [window setTitle:@"loqur."];
