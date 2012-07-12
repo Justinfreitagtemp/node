@@ -1,6 +1,10 @@
 #import <Cocoa/Cocoa.h>
 #import <Webkit/Webkit.h>
+#include "CGSPrivate.h"
 #include "Desktop.h"
+
+id mainWindow;
+id splashWindow;
 
 BOOL addSecurityBookmark (NSURL*url);
 
@@ -157,12 +161,25 @@ void menuBarInit() {
   [appMenuItem setSubmenu:appMenu];
 }
 
-void windowInit() {
- //NSUInteger windowStyle = NSBorderlessWindowMask;
- NSUInteger windowStyle = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
- id window = [[[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
+void splashWindowInit() {
+ NSUInteger windowStyle = NSBorderlessWindowMask;
+ splashWindow = [[[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
-  [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
+  [splashWindow cascadeTopLeftFromPoint:NSMakePoint(20,20)];
+  NSImage *image = [NSImage imageNamed:@"loqur.png"];
+  NSImageView *imageView = [[NSImageView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)];
+  [imageView setImage:image];
+  [splashWindow setContentView:imageView];
+  [splashWindow setOpaque:NO];
+  [splashWindow setBackgroundColor:[NSColor clearColor]];
+  [splashWindow makeKeyAndOrderFront:nil];
+}
+
+void mainWindowInit() {
+ NSUInteger windowStyle = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
+ mainWindow = [[[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
+    styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
+  [mainWindow cascadeTopLeftFromPoint:NSMakePoint(20,20)];
   WebView *webView;
   webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 800, 600))];
   webView.autoresizesSubviews = YES;
@@ -170,10 +187,9 @@ void windowInit() {
   NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
   [NSURLRequest setAllowsAnyHTTPSCertificate:YES forHost:[url host]];
   [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:url]];
-  [window setContentView:webView];
+  [mainWindow setContentView:webView];
   [webView release];
-  [window setTitle:@"loqur."];
-  [window makeKeyAndOrderFront:nil];
+  [mainWindow setTitle:@"loqur."];
 }
 
 void desktopInit () {
@@ -182,7 +198,8 @@ void desktopInit () {
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
   menuBarInit();
   statusBarInit();
-  windowInit();
+  mainWindowInit();
+  splashWindowInit();
   [NSApp activateIgnoringOtherApps:YES];
   [NSApp run];
 }
