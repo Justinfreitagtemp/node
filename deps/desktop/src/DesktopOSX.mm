@@ -196,7 +196,7 @@ void mainWindowInit() {
   [webView setNeedsDisplay:YES];
   [webView release];
   [mainWindow setTitle:@"loqur."];
-  [mainWindow makeKeyAndOrderFront:mainWindow];
+  [mainWindow makeKeyAndOrderFront:nil];
 }
 
 void desktopInit () {
