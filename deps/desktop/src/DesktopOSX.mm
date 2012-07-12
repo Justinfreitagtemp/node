@@ -1,10 +1,9 @@
 #import <Cocoa/Cocoa.h>
 #import <Webkit/Webkit.h>
-#include "CGSPrivate.h"
-#include "Desktop.h"
+#import "Desktop.h"
 
-id mainWindow;
-id splashWindow;
+NSWindow *mainWindow;
+NSWindow *splashWindow;
 
 BOOL addSecurityBookmark (NSURL*url);
 
@@ -171,8 +170,8 @@ void splashWindowInit() {
   [imageView setImage:image];
   [splashWindow setContentView:imageView];
   [splashWindow setOpaque:NO];
+  [splashWindow setHasShadow:NO];
   [splashWindow setBackgroundColor:[NSColor clearColor]];
-  [splashWindow makeKeyAndOrderFront:nil];
 }
 
 void mainWindowInit() {
@@ -188,8 +187,16 @@ void mainWindowInit() {
   [NSURLRequest setAllowsAnyHTTPSCertificate:YES forHost:[url host]];
   [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:url]];
   [mainWindow setContentView:webView];
+  while ([webView isLoading]) {
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    [webView setNeedsDisplay:NO];
+    [NSApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate dateWithTimeIntervalSinceNow:1.0] inMode:NSDefaultRunLoopMode dequeue:YES];
+    [pool drain];
+  }
+  [webView setNeedsDisplay:YES];
   [webView release];
   [mainWindow setTitle:@"loqur."];
+  [mainWindow makeKeyAndOrderFront:mainWindow];
 }
 
 void desktopInit () {

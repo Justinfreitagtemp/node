@@ -31,12 +31,15 @@
       'conditions': [
         ['OS=="mac"', {
           'sources': [
+            'src/NSWindow+Additions.mm',
+            'src/NSWindowFlipper.mm',
             'src/DesktopOSX.mm',
           ],
           'direct_dependent_settings': {
             'libraries': [
               '-framework Cocoa',
               '-framework Webkit',
+              '-framework Quartz',
             ],
           },
           'xcode_settings': {
