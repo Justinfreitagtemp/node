@@ -1,30 +1,71 @@
 #import <Cocoa/Cocoa.h>
 #import <Webkit/Webkit.h>
+#import <ServiceManagement/ServiceManagement.h>
 #import "Desktop.h"
 
-NSWindow *mainWindow;
-NSWindow *splashWindow;
-
 BOOL addSecurityBookmark (NSURL*url);
+
+@interface LLManager : NSObject
++ (BOOL)launchAtLogin;
++ (void)setLaunchAtLogin:(BOOL)value;
+@end
+
+@implementation LLManager
++ (BOOL)launchAtLogin {
+  BOOL launch = NO;
+  CFArrayRef cfJobs = SMCopyAllJobDictionaries(kSMDomainUserLaunchd);
+  NSArray *jobs = [NSArray arrayWithArray:(NSArray *)cfJobs];
+  CFRelease(cfJobs);
+  if([jobs count]) {
+    for(NSDictionary *job in jobs){
+      if([[job objectForKey:@"Label"] isEqualToString:@"com.loqur.desktop"]) {
+        launch = [[job objectForKey:@"OnDemand"] boolValue];
+        break;
+      }
+    }
+  }
+  return launch;
+}
++ (void)setLaunchAtLogin:(BOOL)value {
+  if(!SMLoginItemSetEnabled((CFStringRef)@"com.loqur.desktop", value)) {
+    NSLog(@"SMLoginItemSetEnabled failed!");
+  }
+}
+@end
+
 
 @interface NSURLRequest (DummyInterface)
 + (BOOL)allowsAnyHTTPSCertificateForHost:(NSString*)host;
 + (void)setAllowsAnyHTTPSCertificate:(BOOL)allow forHost:(NSString*)host;
 @end
 
-@interface LoqurWebView : WebView
+@interface LoqurWindow : NSWindow
+@end
+
+@implementation LoqurWindow
+- (BOOL)canBecomeKeyWindow {
+    return YES;
+}
+@end
+
+@interface LoqurWebView : WebView {
+  NSPoint initialLocation;
+}
+@property (assign) NSPoint initialLocation;
 - (id)initWithFrame:(NSRect)frameRect;
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems;
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame;
 @end
 
 @implementation LoqurWebView
+@synthesize initialLocation;
 - (id)initWithFrame:(NSRect)frameRect {
   self = [super initWithFrame:frameRect];
   self.autoresizingMask = (NSViewHeightSizable | NSViewWidthSizable);
   [[[self mainFrame] frameView] setAllowsScrolling:NO];
   [self setFrameLoadDelegate:self];
   [self setUIDelegate:self];
+  [self setEditingDelegate:self];
   [self setMaintainsBackForwardList:NO];
   [self setDrawsBackground:NO];
   WebPreferences* prefs = [self preferences];
@@ -84,6 +125,30 @@ BOOL addSecurityBookmark (NSURL*url);
 }
 - (void)sendMessage:(NSArray *)args {
   [[self windowScriptObject] callWebScriptMethod:@"populateRepairFields" withArguments:args];
+}
+- (void)mouseDown:(NSEvent *)event {
+  self.initialLocation = [event locationInWindow];
+}
+- (void)mouseDragged:(NSEvent *)event {
+  NSPoint currentLocation;
+  NSPoint newOrigin;
+  NSWindow *window = [self window];
+  NSRect  screenFrame = [[NSScreen mainScreen] frame];
+  NSRect  windowFrame = [window frame];
+  currentLocation = [NSEvent mouseLocation];
+  newOrigin.x = currentLocation.x - initialLocation.x;
+  newOrigin.y = currentLocation.y - initialLocation.y;
+  if ((newOrigin.y+windowFrame.size.height) > (screenFrame.origin.y+screenFrame.size.height) ){
+    newOrigin.y=screenFrame.origin.y + (screenFrame.size.height-windowFrame.size.height);
+  }
+  [window setFrameOrigin:newOrigin];
+}
+- (BOOL)webView:(WebView *)webView shouldChangeSelectedDOMRange:(DOMRange *)currentRange
+    toDOMRange:(DOMRange *)proposedRange
+    affinity:(NSSelectionAffinity)selectionAffinity
+    stillSelecting:(BOOL)flag {
+    // disable text selection
+    return NO;
 }
 @end
 
@@ -160,25 +225,11 @@ void menuBarInit() {
   [appMenuItem setSubmenu:appMenu];
 }
 
-void splashWindowInit() {
- NSUInteger windowStyle = NSBorderlessWindowMask;
- splashWindow = [[[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
+void windowInit() {
+ NSUInteger windowStyle = NSClosableWindowMask | NSMiniaturizableWindowMask;
+ id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
-  [splashWindow cascadeTopLeftFromPoint:NSMakePoint(20,20)];
-  NSImage *image = [NSImage imageNamed:@"loqur.png"];
-  NSImageView *imageView = [[NSImageView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)];
-  [imageView setImage:image];
-  [splashWindow setContentView:imageView];
-  [splashWindow setOpaque:NO];
-  [splashWindow setHasShadow:NO];
-  [splashWindow setBackgroundColor:[NSColor clearColor]];
-}
-
-void mainWindowInit() {
- NSUInteger windowStyle = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
- mainWindow = [[[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
-    styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
-  [mainWindow cascadeTopLeftFromPoint:NSMakePoint(20,20)];
+  [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
   WebView *webView;
   webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 800, 600))];
   webView.autoresizesSubviews = YES;
@@ -186,7 +237,7 @@ void mainWindowInit() {
   NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
   [NSURLRequest setAllowsAnyHTTPSCertificate:YES forHost:[url host]];
   [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:url]];
-  [mainWindow setContentView:webView];
+  [window setContentView:webView];
   while ([webView isLoading]) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     [webView setNeedsDisplay:NO];
@@ -195,8 +246,11 @@ void mainWindowInit() {
   }
   [webView setNeedsDisplay:YES];
   [webView release];
-  [mainWindow setTitle:@"loqur."];
-  [mainWindow makeKeyAndOrderFront:nil];
+  [window setOpaque:NO];
+  [window setHasShadow:NO];
+  [window setBackgroundColor:[NSColor clearColor]];
+  [window setTitle:@"loqur."];
+  [window makeKeyAndOrderFront:nil];
 }
 
 void desktopInit () {
@@ -205,8 +259,7 @@ void desktopInit () {
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
   menuBarInit();
   statusBarInit();
-  mainWindowInit();
-  splashWindowInit();
+  windowInit();
   [NSApp activateIgnoringOtherApps:YES];
   [NSApp run];
 }
