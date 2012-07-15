@@ -128,11 +128,9 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
   return YES;
 }
 - (void)md:(NSString *)s {
-  NSLog(@"hree");
-  //CGPoint point = CGPointMake(1,1);
-  //PostMouseEvent(kCGMouseButtonLeft, kCGEventLeftMouseDown, point);
-  //self.initialLocation = [event locationInWindow];
-  self.initialLocation = [NSEvent mouseLocation];
+  NSPoint globalLocation = [NSEvent mouseLocation];
+  NSPoint windowLocation = [[self window] convertScreenToBase:globalLocation];
+  self.initialLocation = [self convertPoint:windowLocation fromView:nil];
 }
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
   [windowScriptObject setValue:self forKey:@"Cocoa"];
@@ -144,7 +142,6 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
   self.initialLocation = [event locationInWindow];
 }
 - (void)mouseDragged:(NSString *)s {
-  NSLog(@"dsadsadasdsa");
   NSPoint currentLocation;
   NSPoint newOrigin;
   NSWindow *window = [self window];
