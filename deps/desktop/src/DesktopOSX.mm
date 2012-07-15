@@ -5,6 +5,13 @@
 
 BOOL addSecurityBookmark (NSURL*url);
 
+void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point) {
+ CGEventRef theEvent = CGEventCreateMouseEvent(NULL, type, point, button);
+ CGEventSetType(theEvent, type);
+ CGEventPost(kCGHIDEventTap, theEvent);
+ CFRelease(theEvent);
+}
+
 @interface LLManager : NSObject
 + (BOOL)launchAtLogin;
 + (void)setLaunchAtLogin:(BOOL)value;
@@ -32,7 +39,6 @@ BOOL addSecurityBookmark (NSURL*url);
   }
 }
 @end
-
 
 @interface NSURLRequest (DummyInterface)
 + (BOOL)allowsAnyHTTPSCertificateForHost:(NSString*)host;
@@ -108,17 +114,25 @@ BOOL addSecurityBookmark (NSURL*url);
   }
 }
 + (NSString*)webScriptNameForSelector:(SEL)sel {
-  if(sel == @selector(logJavaScriptString:))
-    return @"log";
+  if(sel == @selector(md:))
+    return @"md";
+  if(sel == @selector(mouseDragged:))
+    return @"mouseDragged";
   return nil;
 }
 + (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
-  if(sel == @selector(logJavaScriptString:))
+  if(sel == @selector(md:))
+    return NO;
+  if(sel == @selector(mouseDragged:))
     return NO;
   return YES;
 }
-- (void)logJavaScriptString:(NSString*) logText {
-  NSLog(@"JavaScript: %@",logText);
+- (void)md:(NSString *)s {
+  NSLog(@"hree");
+  //CGPoint point = CGPointMake(1,1);
+  //PostMouseEvent(kCGMouseButtonLeft, kCGEventLeftMouseDown, point);
+  //self.initialLocation = [event locationInWindow];
+  self.initialLocation = [NSEvent mouseLocation];
 }
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
   [windowScriptObject setValue:self forKey:@"Cocoa"];
@@ -129,7 +143,8 @@ BOOL addSecurityBookmark (NSURL*url);
 - (void)mouseDown:(NSEvent *)event {
   self.initialLocation = [event locationInWindow];
 }
-- (void)mouseDragged:(NSEvent *)event {
+- (void)mouseDragged:(NSString *)s {
+  NSLog(@"dsadsadasdsa");
   NSPoint currentLocation;
   NSPoint newOrigin;
   NSWindow *window = [self window];
@@ -147,8 +162,8 @@ BOOL addSecurityBookmark (NSURL*url);
     toDOMRange:(DOMRange *)proposedRange
     affinity:(NSSelectionAffinity)selectionAffinity
     stillSelecting:(BOOL)flag {
-    // disable text selection
-    return NO;
+    // NO with disable all text selection
+    return YES;
 }
 @end
 
@@ -227,11 +242,11 @@ void menuBarInit() {
 
 void windowInit() {
  NSUInteger windowStyle = NSClosableWindowMask | NSMiniaturizableWindowMask;
- id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 600)
+ id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 1000, 600)
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
   [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
   WebView *webView;
-  webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 800, 600))];
+  webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 1000, 600))];
   webView.autoresizesSubviews = YES;
   NSString *resourcesPath = [[NSBundle mainBundle] resourcePath];
   NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
