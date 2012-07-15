@@ -151,18 +151,12 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
   }
 }
 + (NSString*)webScriptNameForSelector:(SEL)sel {
-  return nil; 
   if(sel == @selector(md:))
     return @"md";
-  if(sel == @selector(mouseDragged:))
-    return @"mouseDragged";
   return nil;
 }
 + (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
-  return YES;
   if(sel == @selector(md:))
-    return NO;
-  if(sel == @selector(mouseDragged:))
     return NO;
   return YES;
 }
