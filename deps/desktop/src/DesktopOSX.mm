@@ -5,6 +5,8 @@
 
 BOOL addSecurityBookmark (NSURL*url);
 
+WebView *webView;
+
 void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point) {
  CGEventRef theEvent = CGEventCreateMouseEvent(NULL, type, point, button);
  CGEventSetType(theEvent, type);
@@ -57,18 +59,15 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
     return YES;
 }
 - (void)sendEvent:(NSEvent *)theEvent {
-    if ([theEvent type] == NSLeftMouseDown)
-    {
-        [self mouseDown:theEvent];
+  [super sendEvent:theEvent];
+  if ([webView move]) {
+    if ([theEvent type] == NSLeftMouseDown) {
+      [self mouseDown:theEvent];
     }
-    else if ([theEvent type] == NSLeftMouseDragged)
-    {
-        [self mouseDragged:theEvent];
+    else if ([theEvent type] == NSLeftMouseDragged) {
+      [self mouseDragged:theEvent];
     }
-    else
-    {
-        [super sendEvent:theEvent];
-    }
+  }
 }
 - (void)mouseDown:(NSEvent *)event {
   self.initialLocation = [event locationInWindow];
@@ -95,13 +94,18 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
 }
 @end
 
-@interface LoqurWebView : WebView
+@interface LoqurWebView : WebView {
+  NSInteger move;
+}
+@property (assign) NSInteger move;
 - (id)initWithFrame:(NSRect)frameRect;
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems;
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame;
+- (void) shouldMove:(NSInteger)value;
 @end
 
 @implementation LoqurWebView
+@synthesize move;
 - (id)initWithFrame:(NSRect)frameRect {
   self = [super initWithFrame:frameRect];
   self.autoresizingMask = (NSViewHeightSizable | NSViewWidthSizable);
@@ -150,23 +154,21 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
     addSecurityBookmark(url);
   }
 }
+- (void)shouldMove:(NSInteger)value {
+  move = value;
+}
 + (NSString*)webScriptNameForSelector:(SEL)sel {
-  if(sel == @selector(md:))
-    return @"md";
+  if(sel == @selector(shouldMove:))
+    return @"shouldMove";
   return nil;
 }
 + (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
-  if(sel == @selector(md:))
+  if(sel == @selector(shouldMove:))
     return NO;
   return YES;
 }
-- (void)md:(NSString *)s {
-}
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
   [windowScriptObject setValue:self forKey:@"Cocoa"];
-}
-- (void)sendMessage:(NSArray *)args {
-  [[self windowScriptObject] callWebScriptMethod:@"populateRepairFields" withArguments:args];
 }
 @end
 
@@ -248,7 +250,6 @@ void windowInit() {
  id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 1000, 600)
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
   [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
-  WebView *webView;
   webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 1000, 600))];
   webView.autoresizesSubviews = YES;
   NSString *resourcesPath = [[NSBundle mainBundle] resourcePath];
