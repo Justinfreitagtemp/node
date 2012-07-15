@@ -45,26 +45,63 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
 + (void)setAllowsAnyHTTPSCertificate:(BOOL)allow forHost:(NSString*)host;
 @end
 
-@interface LoqurWindow : NSWindow
+@interface LoqurWindow : NSWindow {
+  NSPoint initialLocation;
+}
+@property (assign) NSPoint initialLocation;
 @end
 
 @implementation LoqurWindow
+@synthesize initialLocation;
 - (BOOL)canBecomeKeyWindow {
+    return YES;
+}
+- (void)sendEvent:(NSEvent *)theEvent {
+    if ([theEvent type] == NSLeftMouseDown)
+    {
+        [self mouseDown:theEvent];
+    }
+    else if ([theEvent type] == NSLeftMouseDragged)
+    {
+        [self mouseDragged:theEvent];
+    }
+    else
+    {
+        [super sendEvent:theEvent];
+    }
+}
+- (void)mouseDown:(NSEvent *)event {
+  self.initialLocation = [event locationInWindow];
+}
+- (void)mouseDragged:(NSEvent *)event {
+  NSPoint currentLocation;
+  NSPoint newOrigin;
+  NSRect  screenFrame = [[NSScreen mainScreen] frame];
+  NSRect  windowFrame = [self frame];
+  currentLocation = [NSEvent mouseLocation];
+  newOrigin.x = currentLocation.x - initialLocation.x;
+  newOrigin.y = currentLocation.y - initialLocation.y;
+  if ((newOrigin.y+windowFrame.size.height) > (screenFrame.origin.y+screenFrame.size.height) ){
+    newOrigin.y=screenFrame.origin.y + (screenFrame.size.height-windowFrame.size.height);
+  }
+  [self setFrameOrigin:newOrigin];
+}
+- (BOOL)webView:(WebView *)webView shouldChangeSelectedDOMRange:(DOMRange *)currentRange
+    toDOMRange:(DOMRange *)proposedRange
+    affinity:(NSSelectionAffinity)selectionAffinity
+    stillSelecting:(BOOL)flag {
+    // NO with disable all text selection
     return YES;
 }
 @end
 
-@interface LoqurWebView : WebView {
-  NSPoint initialLocation;
-}
-@property (assign) NSPoint initialLocation;
+@interface LoqurWebView : WebView
 - (id)initWithFrame:(NSRect)frameRect;
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems;
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame;
 @end
 
 @implementation LoqurWebView
-@synthesize initialLocation;
 - (id)initWithFrame:(NSRect)frameRect {
   self = [super initWithFrame:frameRect];
   self.autoresizingMask = (NSViewHeightSizable | NSViewWidthSizable);
@@ -114,6 +151,7 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
   }
 }
 + (NSString*)webScriptNameForSelector:(SEL)sel {
+  return nil; 
   if(sel == @selector(md:))
     return @"md";
   if(sel == @selector(mouseDragged:))
@@ -121,6 +159,7 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
   return nil;
 }
 + (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
+  return YES;
   if(sel == @selector(md:))
     return NO;
   if(sel == @selector(mouseDragged:))
@@ -128,39 +167,12 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
   return YES;
 }
 - (void)md:(NSString *)s {
-  NSPoint globalLocation = [NSEvent mouseLocation];
-  NSPoint windowLocation = [[self window] convertScreenToBase:globalLocation];
-  self.initialLocation = [self convertPoint:windowLocation fromView:nil];
 }
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
   [windowScriptObject setValue:self forKey:@"Cocoa"];
 }
 - (void)sendMessage:(NSArray *)args {
   [[self windowScriptObject] callWebScriptMethod:@"populateRepairFields" withArguments:args];
-}
-- (void)mouseDown:(NSEvent *)event {
-  self.initialLocation = [event locationInWindow];
-}
-- (void)mouseDragged:(NSString *)s {
-  NSPoint currentLocation;
-  NSPoint newOrigin;
-  NSWindow *window = [self window];
-  NSRect  screenFrame = [[NSScreen mainScreen] frame];
-  NSRect  windowFrame = [window frame];
-  currentLocation = [NSEvent mouseLocation];
-  newOrigin.x = currentLocation.x - initialLocation.x;
-  newOrigin.y = currentLocation.y - initialLocation.y;
-  if ((newOrigin.y+windowFrame.size.height) > (screenFrame.origin.y+screenFrame.size.height) ){
-    newOrigin.y=screenFrame.origin.y + (screenFrame.size.height-windowFrame.size.height);
-  }
-  [window setFrameOrigin:newOrigin];
-}
-- (BOOL)webView:(WebView *)webView shouldChangeSelectedDOMRange:(DOMRange *)currentRange
-    toDOMRange:(DOMRange *)proposedRange
-    affinity:(NSSelectionAffinity)selectionAffinity
-    stillSelecting:(BOOL)flag {
-    // NO with disable all text selection
-    return YES;
 }
 @end
 
