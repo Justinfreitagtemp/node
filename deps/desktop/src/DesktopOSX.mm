@@ -85,13 +85,6 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
   }
   [self setFrameOrigin:newOrigin];
 }
-- (BOOL)webView:(WebView *)webView shouldChangeSelectedDOMRange:(DOMRange *)currentRange
-    toDOMRange:(DOMRange *)proposedRange
-    affinity:(NSSelectionAffinity)selectionAffinity
-    stillSelecting:(BOOL)flag {
-    // NO with disable all text selection
-    return YES;
-}
 @end
 
 @interface LoqurWebView : WebView {
