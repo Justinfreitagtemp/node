@@ -272,7 +272,7 @@ void windowInit() {
   NSUInteger windowStyle = NSBorderlessWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
   id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 1000, 700)
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
-  [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
+  [window cascadeTopLeftFromPoint:NSMakePoint(500,1000)];
   webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 1000, 700))];
   webView.autoresizesSubviews = YES;
   [window setDelegate:webView];
