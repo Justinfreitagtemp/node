@@ -155,15 +155,10 @@ LoqurWebView *webView;
 + (NSString*)webScriptNameForSelector:(SEL)sel {
   if(sel == @selector(shouldMove:))
     return @"shouldMove";
-  if(sel == @selector(windowLostFocus:))
-    return @"windowLostFocus";
   return nil;
 }
 + (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
-  return NO;
   if(sel == @selector(shouldMove:))
-    return NO;
-  if(sel == @selector(windowLostFocus:))
     return NO;
   return YES;
 }
@@ -171,14 +166,16 @@ LoqurWebView *webView;
   [windowScriptObject setValue:self forKey:@"Cocoa"];
 }
 - (void)windowDidResignKey:(NSNotification *)notification {
-  NSArray *args = [NSArray arrayWithObject:@"1"];
-  id result = [[self windowScriptObject] callWebScriptMethod:@"windowLostFocus" withArguments:args];
-  NSLog(result);
+  @try {
+    [[self windowScriptObject] callWebScriptMethod:@"windowLostFocus" withArguments:nil];
+  }
+  @catch (NSException *e) {}
 }
 - (void)windowDidBecomeKey:(NSNotification *)notification {
-  //NSArray *args = [NSArray arrayWithObject:@"1"];
-  //id result = [[self windowScriptObject] callWebScriptMethod:@"windowGainedFocus" withArguments:args];
-  //NSLog(result);
+  @try {
+    [[self windowScriptObject] callWebScriptMethod:@"windowGainedFocus" withArguments:nil];
+  }
+  @catch (NSException *e) {}
 }
 @end
 
@@ -257,10 +254,10 @@ void menuBarInit() {
 
 void windowInit() {
   NSUInteger windowStyle = NSBorderlessWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
-  id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 1000, 600)
+  id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 1000, 700)
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
   [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
-  webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 1000, 600))];
+  webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 1000, 700))];
   webView.autoresizesSubviews = YES;
   [window setDelegate:webView];
   NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
