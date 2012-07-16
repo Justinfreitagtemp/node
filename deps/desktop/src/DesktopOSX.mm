@@ -6,10 +6,10 @@
 BOOL addSecurityBookmark (NSURL*url);
 
 void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point) {
- CGEventRef theEvent = CGEventCreateMouseEvent(NULL, type, point, button);
- CGEventSetType(theEvent, type);
- CGEventPost(kCGHIDEventTap, theEvent);
- CFRelease(theEvent);
+ CGEventRef event = CGEventCreateMouseEvent(NULL, type, point, button);
+ CGEventSetType(event, type);
+ CGEventPost(kCGHIDEventTap, event);
+ CFRelease(event);
 }
 
 @interface LLManager : NSObject
@@ -52,6 +52,7 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems;
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame;
 - (void)shouldMove:(NSInteger)value;
+- (id)verifyMove:(NSPoint)point;
 - (NSInteger)move;
 @end
 
@@ -68,14 +69,20 @@ LoqurWebView *webView;
 - (BOOL)canBecomeKeyWindow {
     return YES;
 }
-- (void)sendEvent:(NSEvent *)theEvent {
-  [super sendEvent:theEvent];
-  if ([webView move]) {
-    if ([theEvent type] == NSLeftMouseDown) {
-      [self mouseDown:theEvent];
+- (void)sendEvent:(NSEvent *)event {
+  [super sendEvent:event];
+
+  if ([event type] == NSLeftMouseDown) {
+    [self mouseDown:event];
+    NSPoint locationInView = [webView convertPoint:[event locationInWindow] fromView:webView];
+    [webView shouldMove: [[webView verifyMove:locationInView] intValue]];
+  }
+  else if ([webView move]) {
+    if ([event type] == NSLeftMouseDown) {
+      [self mouseDown:event];
     }
-    else if ([theEvent type] == NSLeftMouseDragged) {
-      [self mouseDragged:theEvent];
+    else if ([event type] == NSLeftMouseDragged) {
+      [self mouseDragged:event];
     }
   }
 }
@@ -176,6 +183,15 @@ LoqurWebView *webView;
     [[self windowScriptObject] callWebScriptMethod:@"windowGainedFocus" withArguments:nil];
   }
   @catch (NSException *e) {}
+}
+- (id)verifyMove:(NSPoint)point {
+  //NSLog(@"x is %f y is %f", point.x, 700 - point.y);
+  NSArray *args = [NSArray arrayWithObjects:[NSNumber numberWithInt:(NSInteger) point.x],[NSNumber numberWithInt:((NSInteger) 700 - point.y)], nil];
+  @try {
+    return [[self windowScriptObject] callWebScriptMethod:@"verifyMove" withArguments:args];
+  }
+  @catch (NSException *e) {}
+  return [NSNumber numberWithInt:0];
 }
 @end
 
