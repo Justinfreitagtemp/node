@@ -6,6 +6,7 @@
 BOOL addSecurityBookmark (NSURL*url);
 
 WebView *webView;
+NSImageView *imageView;
 
 void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point) {
  CGEventRef theEvent = CGEventCreateMouseEvent(NULL, type, point, button);
@@ -85,6 +86,24 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
   }
   [self setFrameOrigin:newOrigin];
 }
+- (void)windowDidResignKey:(NSNotification *)notification {
+  NSLog(@"resign");
+  NSImage *image = [webView lostFocus];
+  [imageView setImage:image];
+  [[webView animator] setAlphaValue:0.0f];
+  [[imageView animator] setAlphaValue:1.0f];
+}
+- (void)windowDidBecomeKey:(NSNotification *)notification {
+  NSLog(@"become");
+  [[webView animator] setAlphaValue:1.0f];
+  [[imageView animator] setAlphaValue:0.0f];
+}
+- (void)windowDidBecomeMain:(NSNotification *)notification {
+  NSLog(@"become main");
+}
+- (void)windowDidResignMain:(NSNotification *)notification {
+  NSLog(@"resign main");
+}
 @end
 
 @interface LoqurWebView : WebView {
@@ -163,6 +182,15 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
   [windowScriptObject setValue:self forKey:@"Cocoa"];
 }
+- (NSImage *)lostFocus {
+  [self lockFocus];
+  NSBitmapImageRep *imageRep = [[NSBitmapImageRep alloc] initWithFocusedViewRect:[self bounds]];
+  [self unlockFocus];
+  [imageRep bitmapImageRepByConvertingToColorSpace:[NSColorSpace genericGrayColorSpace]  renderingIntent:NSColorRenderingIntentDefault];
+  NSImage *image = [[NSImage alloc] initWithSize:[imageRep size]];
+  [image addRepresentation: imageRep];
+  return image;
+}
 @end
 
 void addFiles() {
@@ -239,29 +267,34 @@ void menuBarInit() {
 }
 
 void windowInit() {
- NSUInteger windowStyle = NSClosableWindowMask | NSMiniaturizableWindowMask;
- id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 1000, 600)
+  NSUInteger windowStyle = NSBorderlessWindowMask;
+  id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 1000, 600)
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
   [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
+  [window setDelegate:window];
   webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 1000, 600))];
   webView.autoresizesSubviews = YES;
   NSString *resourcesPath = [[NSBundle mainBundle] resourcePath];
   NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
   [NSURLRequest setAllowsAnyHTTPSCertificate:YES forHost:[url host]];
   [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:url]];
-  [window setContentView:webView];
+  imageView = [[NSImageView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(-10, -10, 1000, 600))];
+
+  NSView *view = [[NSView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 1000, 600))];
+  [view addSubview:webView];
+  [view addSubview:imageView];
+  [window setContentView:view];
+
   while ([webView isLoading]) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     [webView setNeedsDisplay:NO];
     [NSApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate dateWithTimeIntervalSinceNow:1.0] inMode:NSDefaultRunLoopMode dequeue:YES];
     [pool drain];
   }
-  [webView setNeedsDisplay:YES];
-  [webView release];
+  [view setNeedsDisplay:YES];
   [window setOpaque:NO];
   [window setHasShadow:NO];
   [window setBackgroundColor:[NSColor clearColor]];
-  [window setTitle:@"loqur."];
   [window makeKeyAndOrderFront:nil];
 }
 
