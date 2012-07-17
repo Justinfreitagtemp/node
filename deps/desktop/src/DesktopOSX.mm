@@ -70,20 +70,23 @@ LoqurWebView *webView;
     return YES;
 }
 - (void)sendEvent:(NSEvent *)event {
+  NSEventType type = [event type];
+  NSPoint location = [event locationInWindow];
+  if (type == NSLeftMouseDown) {
+    NSPoint p = [webView convertPoint:location fromView:webView];
+    if (p.x < 50 || p.x > 750 || p.y < 100 || p.y > 600) {
+      return;
+    }
+  }
   [super sendEvent:event];
-
-  if ([event type] == NSLeftMouseDown) {
+  if (type == NSLeftMouseDown) {
     [self mouseDown:event];
-    NSPoint locationInView = [webView convertPoint:[event locationInWindow] fromView:webView];
+    NSPoint locationInView = [webView convertPoint:location fromView:webView];
     [webView shouldMove: [[webView verifyMove:locationInView] intValue]];
   }
   else if ([webView move]) {
-    if ([event type] == NSLeftMouseDown) {
-      [self mouseDown:event];
-    }
-    else if ([event type] == NSLeftMouseDragged) {
-      [self mouseDragged:event];
-    }
+    if (type == NSLeftMouseDown) [self mouseDown:event];
+    else if (type == NSLeftMouseDragged) [self mouseDragged:event];
   }
 }
 - (void)mouseDown:(NSEvent *)event {
@@ -270,10 +273,11 @@ void menuBarInit() {
 
 void windowInit() {
   NSUInteger windowStyle = NSBorderlessWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
-  id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 1000, 700)
+  id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 700)
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
-  [window cascadeTopLeftFromPoint:NSMakePoint(500,1000)];
-  webView = [[LoqurWebView alloc] initWithFrame:NSRectFromCGRect(CGRectMake(0, 0, 1000, 700))];
+  [[window windowController] setShouldCascadeWindows:NO];
+  [window setFrameAutosaveName:@"loqurWindow"];
+  webView = [[LoqurWebView alloc] initWithFrame:[window frame]];
   webView.autoresizesSubviews = YES;
   [window setDelegate:webView];
   NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
