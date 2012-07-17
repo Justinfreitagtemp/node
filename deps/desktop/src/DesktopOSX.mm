@@ -60,6 +60,8 @@ LoqurWebView *webView;
 
 @interface LoqurWindow : NSWindow {
   NSPoint initialLocation;
+  BOOL moving;
+  BOOL resizing;
 }
 @property (assign) NSPoint initialLocation;
 @end
@@ -72,19 +74,27 @@ LoqurWebView *webView;
 - (void)sendEvent:(NSEvent *)event {
   NSEventType type = [event type];
   NSPoint location = [event locationInWindow];
+
+  if (type == NSLeftMouseUp) {
+    moving = false;
+    resizing = false;
+  }
   if (type == NSLeftMouseDown) {
     NSPoint p = [webView convertPoint:location fromView:webView];
-    if (p.x < 50 || p.x > 750 || p.y < 100 || p.y > 600) {
-      return;
-    }
+    if (p.x > 700 && p.x < 750 && p.y > 550 && p.y < 600) resizing = true;
+    else if (p.x < 50 || p.x > 750 || p.y < 100 || p.y > 600) return;
   }
   [super sendEvent:event];
-  if (type == NSLeftMouseDown) {
+  if (resizing) {
+    [self mouseDragged:event];
+  }
+  else if (type == NSLeftMouseDown) {
     [self mouseDown:event];
     NSPoint locationInView = [webView convertPoint:location fromView:webView];
     [webView shouldMove: [[webView verifyMove:locationInView] intValue]];
   }
   else if ([webView move]) {
+    moving = true;
     if (type == NSLeftMouseDown) [self mouseDown:event];
     else if (type == NSLeftMouseDragged) [self mouseDragged:event];
   }
@@ -93,17 +103,22 @@ LoqurWebView *webView;
   self.initialLocation = [event locationInWindow];
 }
 - (void)mouseDragged:(NSEvent *)event {
-  NSPoint currentLocation;
-  NSPoint newOrigin;
-  NSRect  screenFrame = [[NSScreen mainScreen] frame];
-  NSRect  windowFrame = [self frame];
-  currentLocation = [NSEvent mouseLocation];
-  newOrigin.x = currentLocation.x - initialLocation.x;
-  newOrigin.y = currentLocation.y - initialLocation.y;
-  if ((newOrigin.y+windowFrame.size.height) > (screenFrame.origin.y+screenFrame.size.height) ){
-    newOrigin.y=screenFrame.origin.y + (screenFrame.size.height-windowFrame.size.height);
+  if (moving) {
+    NSPoint currentLocation;
+    NSPoint newOrigin;
+    NSRect  screenFrame = [[NSScreen mainScreen] frame];
+    NSRect  windowFrame = [self frame];
+    currentLocation = [NSEvent mouseLocation];
+    newOrigin.x = currentLocation.x - initialLocation.x;
+    newOrigin.y = currentLocation.y - initialLocation.y;
+    if ((newOrigin.y+windowFrame.size.height) > (screenFrame.origin.y+screenFrame.size.height) ){
+      newOrigin.y=screenFrame.origin.y + (screenFrame.size.height-windowFrame.size.height);
+    }
+    [self setFrameOrigin:newOrigin];
   }
-  [self setFrameOrigin:newOrigin];
+  else if (resizing) {
+    NSLog(@"resizing");
+  }
 }
 @end
 
@@ -188,7 +203,6 @@ LoqurWebView *webView;
   @catch (NSException *e) {}
 }
 - (id)verifyMove:(NSPoint)point {
-  //NSLog(@"x is %f y is %f", point.x, 700 - point.y);
   NSArray *args = [NSArray arrayWithObjects:[NSNumber numberWithInt:(NSInteger) point.x],[NSNumber numberWithInt:((NSInteger) 700 - point.y)], nil];
   @try {
     return [[self windowScriptObject] callWebScriptMethod:@"verifyMove" withArguments:args];
@@ -272,7 +286,7 @@ void menuBarInit() {
 }
 
 void windowInit() {
-  NSUInteger windowStyle = NSBorderlessWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask;
+  NSUInteger windowStyle = NSBorderlessWindowMask;
   id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, 800, 700)
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
   [[window windowController] setShouldCascadeWindows:NO];
