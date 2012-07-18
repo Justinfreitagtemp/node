@@ -72,6 +72,8 @@ LoqurWebView *webView;
 
 @interface LoqurWindow : NSWindow {
   NSPoint initialLocation;
+  BOOL moving;
+  BOOL resizing;
 }
 @property (assign) NSPoint initialLocation;
 @end
@@ -85,16 +87,30 @@ LoqurWebView *webView;
     return YES;
 }
 - (void)sendEvent:(NSEvent *)event {
-  [super sendEvent:event];
   NSEventType type = [event type];
+  NSPoint location = [event locationInWindow];
+
+  if (type == NSLeftMouseUp) {
+    moving = false;
+    resizing = false;
+  }
   if (type == NSLeftMouseDown) {
+    NSPoint p = [webView convertPoint:location fromView:webView];
+    //NSRect *frame = [window frame];
+    //if (p.x > 700 && p.x < 750 && p.y > 550 && p.y < 600) resizing = true;
+    //else if (p.x < 50 || p.x > (frame.width - 50) || p.y < 100 || p.y > (frame.height - 50)) return;
+  }
+  [super sendEvent:event];
+  if (resizing) {
+    [self mouseDragged:event];
+  }
+  else if (type == NSLeftMouseDown) {
     [self mouseDown:event];
-    NSPoint locationInView = [webView convertPoint:[event locationInWindow] fromView:webView];
-    NSRect  windowFrame = [self frame];
-    locationInView.y = windowFrame.size.height - locationInView.y;
+    NSPoint locationInView = [webView convertPoint:location fromView:webView];
     [webView shouldMove: [[webView verifyMove:locationInView] intValue]];
   }
   else if ([webView move]) {
+    moving = true;
     if (type == NSLeftMouseDown) [self mouseDown:event];
     else if (type == NSLeftMouseDragged) [self mouseDragged:event];
   }
@@ -103,17 +119,22 @@ LoqurWebView *webView;
   self.initialLocation = [event locationInWindow];
 }
 - (void)mouseDragged:(NSEvent *)event {
-  NSPoint currentLocation;
-  NSPoint newOrigin;
-  NSRect  screenFrame = [[NSScreen mainScreen] frame];
-  NSRect  windowFrame = [self frame];
-  currentLocation = [NSEvent mouseLocation];
-  newOrigin.x = currentLocation.x - initialLocation.x;
-  newOrigin.y = currentLocation.y - initialLocation.y;
-  if ((newOrigin.y+windowFrame.size.height) > (screenFrame.origin.y+screenFrame.size.height) ){
-    newOrigin.y=screenFrame.origin.y + (screenFrame.size.height-windowFrame.size.height);
+  if (moving) {
+    NSPoint currentLocation;
+    NSPoint newOrigin;
+    NSRect  screenFrame = [[NSScreen mainScreen] frame];
+    NSRect  windowFrame = [self frame];
+    currentLocation = [NSEvent mouseLocation];
+    newOrigin.x = currentLocation.x - initialLocation.x;
+    newOrigin.y = currentLocation.y - initialLocation.y;
+    if ((newOrigin.y+windowFrame.size.height) > (screenFrame.origin.y+screenFrame.size.height) ){
+      newOrigin.y=screenFrame.origin.y + (screenFrame.size.height-windowFrame.size.height);
+    }
+    [self setFrameOrigin:newOrigin];
   }
-  [self setFrameOrigin:newOrigin];
+  else if (resizing) {
+    NSLog(@"resizing");
+  }
 }
 @end
 
@@ -175,6 +196,7 @@ LoqurWebView *webView;
   move = value;
 }
 - (void)closeWindow {
+  NSLog(@"closing.");
   [[NSRunningApplication currentApplication] hide];
 }
 - (void)minimiseWindow {
@@ -188,21 +210,27 @@ LoqurWebView *webView;
   [window setFrame:newFrame display:true animate:true];
 }
 + (NSString*)webScriptNameForSelector:(SEL)sel {
-  if (sel == @selector(shouldMove:)) return @"shouldMove:";
+  if (sel == @selector(shouldMove)) return @"shouldMove";
   if (sel == @selector(closeWindow)) return @"closeWindow";
   if (sel == @selector(minimiseWindow)) return @"minimiseWindow";
   if (sel == @selector(maximiseWindow)) return @"maximiseWindow";
   return nil;
 }
 + (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
-  if (sel == @selector(shouldMove:)) return NO;
+  if (sel == @selector(shouldMove)) return NO;
   if (sel == @selector(closeWindow)) return NO;
   if (sel == @selector(minimiseWindow)) return NO;
   if (sel == @selector(maximiseWindow)) return NO;
   return YES;
 }
+- (void)updateShadow:(NSTimer *) timer {
+  [[self window] setHasShadow:false];
+  [[self window] setHasShadow:true];
+  [
+}
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
   [windowScriptObject setValue:self forKey:@"Cocoa"];
+  [NSTimer scheduledTimerWithTimeInterval:10 target:self selector:@selector(updateShadow:) userInfo:nil repeats:NO];
 }
 - (void)windowDidResignKey:(NSNotification *)notification {
   @try {
@@ -217,7 +245,7 @@ LoqurWebView *webView;
   @catch (NSException *e) {}
 }
 - (id)verifyMove:(NSPoint)point {
-  NSArray *args = [NSArray arrayWithObjects:[NSNumber numberWithInt:(NSInteger) point.x],[NSNumber numberWithInt:(NSInteger) point.y], nil];
+  NSArray *args = [NSArray arrayWithObjects:[NSNumber numberWithInt:(NSInteger) point.x],[NSNumber numberWithInt:((NSInteger) 700 - point.y)], nil];
   @try {
     return [[self windowScriptObject] callWebScriptMethod:@"verifyMove" withArguments:args];
   }
@@ -326,6 +354,16 @@ void windowInit() {
   [window setOpaque:NO];
   [window setHasShadow:YES];
   [window setBackgroundColor:[NSColor clearColor]];
+  /*
+  id class = [[[window contentView] superview] class]; 
+  // Add our drawRect: to the frame class 
+  Method m0 = class_getInstanceMethod([window class], @selector(drawRect:));
+  class_addMethod(class, @selector(drawRectOriginal:), method_getImplementation(m0), method_getTypeEncoding(m0));
+  // Exchange methods
+  Method m1 = class_getInstanceMethod(class, @selector(drawRect:));
+  Method m2 = class_getInstanceMethod(class, @selector(drawRectOriginal:));
+  method_exchangeImplementations(m1, m2);
+  */
   [webView setNeedsDisplay:YES];
   [window makeKeyAndOrderFront:nil];
 }
@@ -340,3 +378,15 @@ void desktopInit () {
   [NSApp activateIgnoringOtherApps:YES];
   [NSApp run];
 }
+
+/*
+- (void)drawRect:(NSRect)rect {
+  [self drawRectOriginal:rect];
+  NSRect windowRect = [[self window] frame]; 
+  windowRect.origin = NSMakePoint(0, 0);  
+  float cornerRadius = [self roundedCornerRadius]; 
+  [[NSBezierPath bezierPathWithRoundedRect:windowRect 
+    xRadius:cornerRadius yRadius:cornerRadius] addClip];
+  [[NSBezierPath bezierPathWithRect:rect] addClip];
+}
+*/
