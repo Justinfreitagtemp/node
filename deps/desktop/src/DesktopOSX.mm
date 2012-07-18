@@ -54,6 +54,9 @@ void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point)
 - (void)shouldMove:(NSInteger)value;
 - (id)verifyMove:(NSPoint)point;
 - (NSInteger)move;
+- (void) closeWindow;
+- (void) minimiseWindow;
+- (void) maximiseWindow;
 @end
 
 LoqurWebView *webView;
@@ -69,6 +72,9 @@ LoqurWebView *webView;
 @implementation LoqurWindow
 @synthesize initialLocation;
 - (BOOL)canBecomeKeyWindow {
+    return YES;
+}
+- (BOOL)canBecomeMainWindow {
     return YES;
 }
 - (void)sendEvent:(NSEvent *)event {
@@ -141,9 +147,11 @@ LoqurWebView *webView;
   [self registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
   return self;
 }
+/*
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems {
   return nil;
 }
+*/
 - (NSUInteger)webView:(WebView *)sender dragDestinationActionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo {
   return WebDragDestinationActionDHTML;
 }
@@ -177,14 +185,32 @@ LoqurWebView *webView;
 - (void)shouldMove:(NSInteger)value {
   move = value;
 }
+- (void)closeWindow {
+  NSLog(@"closing.");
+  [[NSRunningApplication currentApplication] hide];
+}
+- (void)minimiseWindow {
+  [[self window] miniaturize:self];
+}
+- (void)maximiseWindow {
+  NSWindow *window = [self window];
+  NSRect existingFrame = [window frame];
+  NSSize maxSize = [window maxSize];
+  NSRect newFrame = NSMakeRect(existingFrame.origin.x, existingFrame.origin.y, maxSize.width, maxSize.height);
+  [window setFrame:newFrame display:true animate:true];
+}
 + (NSString*)webScriptNameForSelector:(SEL)sel {
-  if(sel == @selector(shouldMove:))
-    return @"shouldMove";
+  if (sel == @selector(shouldMove)) return @"shouldMove";
+  if (sel == @selector(closeWindow)) return @"closeWindow";
+  if (sel == @selector(minimiseWindow)) return @"minimiseWindow";
+  if (sel == @selector(maximiseWindow)) return @"maximiseWindow";
   return nil;
 }
 + (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
-  if(sel == @selector(shouldMove:))
-    return NO;
+  if (sel == @selector(shouldMove)) return NO;
+  if (sel == @selector(closeWindow)) return NO;
+  if (sel == @selector(minimiseWindow)) return NO;
+  if (sel == @selector(maximiseWindow)) return NO;
   return YES;
 }
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
@@ -291,6 +317,8 @@ void windowInit() {
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
   [[window windowController] setShouldCascadeWindows:NO];
   [window setFrameAutosaveName:@"loqurWindow"];
+  [window setContentMaxSize:NSMakeSize(1500, 1200)];
+  [window setContentMinSize:NSMakeSize(600, 400)];
   webView = [[LoqurWebView alloc] initWithFrame:[window frame]];
   webView.autoresizesSubviews = YES;
   [window setDelegate:webView];
@@ -305,10 +333,12 @@ void windowInit() {
     [NSApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate dateWithTimeIntervalSinceNow:1.0] inMode:NSDefaultRunLoopMode dequeue:YES];
     [pool drain];
   }
-  [webView setNeedsDisplay:YES];
+  [[NSUserDefaults standardUserDefaults] setBool:TRUE forKey:@"WebKitDeveloperExtras"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
   [window setOpaque:NO];
   [window setHasShadow:NO];
   [window setBackgroundColor:[NSColor clearColor]];
+  [webView setNeedsDisplay:YES];
   [window makeKeyAndOrderFront:nil];
 }
 
