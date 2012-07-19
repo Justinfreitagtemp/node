@@ -14,40 +14,8 @@
 
 BOOL addSecurityBookmark (NSURL*url);
 
-void PostMouseEvent(CGMouseButton button, CGEventType type, const CGPoint point) {
- CGEventRef event = CGEventCreateMouseEvent(NULL, type, point, button);
- CGEventSetType(event, type);
- CGEventPost(kCGHIDEventTap, event);
- CFRelease(event);
-}
-
-@interface LLManager : NSObject
-+ (BOOL)launchAtLogin;
-+ (void)setLaunchAtLogin:(BOOL)value;
-@end
-
-@implementation LLManager
-+ (BOOL)launchAtLogin {
-  BOOL launch = NO;
-  CFArrayRef cfJobs = SMCopyAllJobDictionaries(kSMDomainUserLaunchd);
-  NSArray *jobs = [NSArray arrayWithArray:(NSArray *)cfJobs];
-  CFRelease(cfJobs);
-  if([jobs count]) {
-    for(NSDictionary *job in jobs){
-      if([[job objectForKey:@"Label"] isEqualToString:@"com.loqur.desktop"]) {
-        launch = [[job objectForKey:@"OnDemand"] boolValue];
-        break;
-      }
-    }
-  }
-  return launch;
-}
-+ (void)setLaunchAtLogin:(BOOL)value {
-  if(!SMLoginItemSetEnabled((CFStringRef)@"com.loqur.desktop", value)) {
-    NSLog(@"SMLoginItemSetEnabled failed!");
-  }
-}
-@end
+NSWindow *window;
+NSWindow *w;
 
 @interface NSURLRequest (DummyInterface)
 + (BOOL)allowsAnyHTTPSCertificateForHost:(NSString*)host;
@@ -78,10 +46,10 @@ LoqurWebView *webView;
 
 @implementation LoqurWindow
 @synthesize initialLocation;
-- (BOOL)canBecomeKeyWindow {
+- (BOOL)canBecomeMainWindow {
     return YES;
 }
-- (BOOL)canBecomeMainWindow {
+- (BOOL)canBecomeKeyWindow {
     return YES;
 }
 - (void)sendEvent:(NSEvent *)event {
@@ -90,8 +58,7 @@ LoqurWebView *webView;
   if (type == NSLeftMouseDown) {
     [self mouseDown:event];
     NSPoint locationInView = [webView convertPoint:[event locationInWindow] fromView:webView];
-    NSRect  windowFrame = [self frame];
-    locationInView.y = windowFrame.size.height - locationInView.y;
+    locationInView.y = [self frame].size.height - locationInView.y;
     [webView shouldMove: [[webView verifyMove:locationInView] intValue]];
   }
   else if ([webView move]) {
@@ -99,6 +66,7 @@ LoqurWebView *webView;
     else if (type == NSLeftMouseDragged) [self mouseDragged:event];
   }
 }
+
 - (void)mouseDown:(NSEvent *)event {
   self.initialLocation = [event locationInWindow];
 }
@@ -204,18 +172,6 @@ LoqurWebView *webView;
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
   [windowScriptObject setValue:self forKey:@"Cocoa"];
 }
-- (void)windowDidResignKey:(NSNotification *)notification {
-  @try {
-    [[self windowScriptObject] callWebScriptMethod:@"windowLostFocus" withArguments:nil];
-  }
-  @catch (NSException *e) {}
-}
-- (void)windowDidBecomeKey:(NSNotification *)notification {
-  @try {
-    [[self windowScriptObject] callWebScriptMethod:@"windowGainedFocus" withArguments:nil];
-  }
-  @catch (NSException *e) {}
-}
 - (id)verifyMove:(NSPoint)point {
   NSArray *args = [NSArray arrayWithObjects:[NSNumber numberWithInt:(NSInteger) point.x],[NSNumber numberWithInt:(NSInteger) point.y], nil];
   @try {
@@ -223,6 +179,24 @@ LoqurWebView *webView;
   }
   @catch (NSException *e) {}
   return [NSNumber numberWithInt:0];
+}
+@end
+
+@interface WindowDelegate : NSObject
+@end
+
+@implementation WindowDelegate
+- (void)windowDidResignKey:(NSNotification *)notification {
+  @try {
+    [[webView windowScriptObject] callWebScriptMethod:@"windowLostFocus" withArguments:nil];
+  }
+  @catch (NSException *e) {}
+}
+- (void)windowDidBecomeKey:(NSNotification *)notification {
+  @try {
+    [[webView windowScriptObject] callWebScriptMethod:@"windowGainedFocus" withArguments:nil];
+  }
+  @catch (NSException *e) {}
 }
 @end
 
@@ -300,33 +274,36 @@ void menuBarInit() {
 }
 
 void windowInit() {
-  NSUInteger windowStyle = NSResizableWindowMask; //NSBorderlessWindowMask;
-  id window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(0, 0, INITIAL_WIDTH, INITIAL_HEIGHT)
+  NSUInteger windowStyle = NSResizableWindowMask;
+  window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(50, 100, INITIAL_WIDTH, INITIAL_HEIGHT)
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
   [window center];
   [[window windowController] setShouldCascadeWindows:NO];
-  [window setFrameAutosaveName:@"loqurWindow"];
+  //[window setFrameAutosaveName:@"loqurWindow"];
+  [window setOpaque:NO];
+  [window setHasShadow:true];
+  [window setBackgroundColor:[NSColor clearColor]];
   [window setContentMaxSize:NSMakeSize(MAX_WIDTH, MAX_HEIGHT)];
   [window setContentMinSize:NSMakeSize(MIN_WIDTH, MIN_HEIGHT)];
   webView = [[LoqurWebView alloc] initWithFrame:[window frame]];
   webView.autoresizesSubviews = YES;
-  [window setDelegate:webView];
+  [window setDelegate:[WindowDelegate alloc]];
   NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
   [NSURLRequest setAllowsAnyHTTPSCertificate:YES forHost:[url host]];
   [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:url]];
+
   [window setContentView:webView];
+
   while ([webView isLoading]) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     [webView setNeedsDisplay:NO];
     [NSApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate dateWithTimeIntervalSinceNow:1.0] inMode:NSDefaultRunLoopMode dequeue:YES];
     [pool drain];
   }
-  [[NSUserDefaults standardUserDefaults] setBool:TRUE forKey:@"WebKitDeveloperExtras"];
+  [window invalidateShadow];
+  [webView setNeedsDisplay:true];
+  [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"WebKitDeveloperExtras"];
   [[NSUserDefaults standardUserDefaults] synchronize];
-  [window setOpaque:NO];
-  [window setHasShadow:YES];
-  [window setBackgroundColor:[NSColor clearColor]];
-  [webView setNeedsDisplay:YES];
   [window makeKeyAndOrderFront:nil];
 }
 
