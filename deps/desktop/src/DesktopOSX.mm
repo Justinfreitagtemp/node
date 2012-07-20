@@ -73,14 +73,13 @@ LoqurWebView *webView;
 - (void)mouseDragged:(NSEvent *)event {
   NSPoint currentLocation;
   NSPoint newOrigin;
-  NSRect  screenFrame = [[NSScreen mainScreen] frame];
+  NSRect  screenFrame = [[NSScreen mainScreen] visibleFrame];
   NSRect  windowFrame = [self frame];
   currentLocation = [NSEvent mouseLocation];
   newOrigin.x = currentLocation.x - initialLocation.x;
   newOrigin.y = currentLocation.y - initialLocation.y;
-  if ((newOrigin.y+windowFrame.size.height) > (screenFrame.origin.y+screenFrame.size.height) ){
+  if ((newOrigin.y+windowFrame.size.height) > (screenFrame.origin.y+screenFrame.size.height))
     newOrigin.y=screenFrame.origin.y + (screenFrame.size.height-windowFrame.size.height);
-  }
   [self setFrameOrigin:newOrigin];
 }
 @end
