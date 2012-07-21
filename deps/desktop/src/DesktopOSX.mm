@@ -100,7 +100,7 @@ LoqurWebView *webView;
   [prefs setJavaScriptEnabled:YES];
   [prefs setPlugInsEnabled:NO];
   [prefs setPrivateBrowsingEnabled:YES];
-  [self registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
+  //[self registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
   return self;
 }
 /*
@@ -109,23 +109,29 @@ LoqurWebView *webView;
 }
 */
 - (NSUInteger)webView:(WebView *)sender dragDestinationActionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo {
-  return WebDragDestinationActionDHTML;
+  return WebDragDestinationActionAny;
 }
 - (NSUInteger)webView:(WebView *)sender dragSourceActionMaskForPoint:(NSPoint)point {
-  return WebDragSourceActionDHTML;
+  return WebDragSourceActionAny;
 }
+
 - (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)sender{
-  return NSDragOperationCopy;
+  [super draggingUpdated:sender];
+  return NSDragOperationEvery;
 }
 - (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender {
+  [super draggingEntered:sender];
   return NSDragOperationEvery;
 }
 - (void)draggingExited:(id <NSDraggingInfo>)sender {
+  [super draggingExisting:sender];
 }
 - (BOOL)prepareForDragOperation:(id <NSDraggingInfo>)sender  {
+  [super prepareForDragOperation:sender];
   return YES;
 }
 - (BOOL)performDragOperation:(id <NSDraggingInfo>)sender {
+  [super performDragOperation:sender];
   return YES;
 }
 - (void)concludeDragOperation:(id <NSDraggingInfo>)sender{
@@ -286,7 +292,7 @@ void windowInit() {
   [window setContentMinSize:NSMakeSize(MIN_WIDTH, MIN_HEIGHT)];
   webView = [[LoqurWebView alloc] initWithFrame:[window frame]];
   webView.autoresizesSubviews = YES;
-  [window setDelegate:[WindowDelegate alloc]];
+  [window setDelegate:(id) [WindowDelegate alloc]];
   NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
   [NSURLRequest setAllowsAnyHTTPSCertificate:YES forHost:[url host]];
   [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:url]];
