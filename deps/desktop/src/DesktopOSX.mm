@@ -11,6 +11,7 @@
 #define MIN_HEIGHT 400
 
 BOOL addSecurityBookmark (NSURL*url);
+void addFiles();
 
 NSWindow *window;
 NSWindow *w;
@@ -176,6 +177,7 @@ LoqurWebView *webView;
   if (sel == @selector(closeWindow)) return @"closeWindow";
   if (sel == @selector(minimiseWindow)) return @"minimiseWindow";
   if (sel == @selector(maximiseWindow)) return @"maximiseWindow";
+  if (sel == @selector(showFileDialog)) return @"showFileDialog";
   return nil;
 }
 + (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
@@ -183,6 +185,7 @@ LoqurWebView *webView;
   if (sel == @selector(closeWindow)) return NO;
   if (sel == @selector(minimiseWindow)) return NO;
   if (sel == @selector(maximiseWindow)) return NO;
+  if (sel == @selector(showFileDialog)) return NO;
   return YES;
 }
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
@@ -195,6 +198,9 @@ LoqurWebView *webView;
   }
   @catch (NSException *e) {}
   return [NSNumber numberWithInt:0];
+}
+- (void)showFileDialog {
+  addFiles();
 }
 @end
 
@@ -224,9 +230,14 @@ void addFiles() {
   [openDlg setShowsHiddenFiles:YES];
   [openDlg setCanChooseDirectories:YES];
   [openDlg setCanChooseFiles:YES];
-  for (id url in [openDlg URLs]) {
-    addSecurityBookmark(url);
-  }
+  // int result = [openDlg runModalForDirectory:NSHomeDirectory() file:nil types:nil];
+  [openDlg beginWithCompletionHandler:^(NSInteger returnCode) {
+    if (returnCode == NSOKButton) {
+      for (id url in [openDlg URLs]) {
+        addSecurityBookmark(url);
+      }
+    }
+  }];
 }
 
 BOOL addSecurityBookmark (NSURL* url) {
