@@ -84,6 +84,16 @@ LoqurWebView *webView;
 }
 @end
 
+@interface WebFrameView (transparent)
+@end
+
+@implementation WebFrameView (transparent)
+
+- (BOOL)isOpaque {
+  return NO;
+}
+@end
+
 @implementation LoqurWebView
 - (id)initWithFrame:(NSRect)frameRect {
   self = [super initWithFrame:frameRect];
@@ -102,6 +112,9 @@ LoqurWebView *webView;
   [prefs setPrivateBrowsingEnabled:YES];
   //[self registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
   return self;
+}
+- (BOOL)isOpaque {
+  return NO;
 }
 /*
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems {
@@ -279,7 +292,7 @@ void menuBarInit() {
 }
 
 void windowInit() {
-  NSUInteger windowStyle = NSResizableWindowMask;
+  NSUInteger windowStyle = NSBorderlessWindowMask; //NSResizableWindowMask;
   window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(50, 100, INITIAL_WIDTH, INITIAL_HEIGHT)
     styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
   [window center];
