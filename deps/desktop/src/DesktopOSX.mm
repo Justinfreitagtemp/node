@@ -76,8 +76,8 @@ LoqurWebView *webView;
   currentLocation = [NSEvent mouseLocation];
   newOrigin.x = currentLocation.x - initialLocation.x;
   newOrigin.y = currentLocation.y - initialLocation.y;
-  if ((newOrigin.y+windowFrame.size.height) > (screenFrame.origin.y+screenFrame.size.height))
-    newOrigin.y=screenFrame.origin.y + (screenFrame.size.height-windowFrame.size.height);
+  if ((newOrigin.y+windowFrame.size.height-100) > (screenFrame.origin.y+screenFrame.size.height))
+    newOrigin.y=screenFrame.origin.y + (screenFrame.size.height-(windowFrame.size.height-100));
   [self setFrameOrigin:newOrigin];
 }
 @end
