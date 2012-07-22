@@ -23,13 +23,16 @@ NSWindow *w;
 
 @interface LoqurWebView : WebView {
   NSInteger move;
+  NSInteger resize;
 }
 - (id)initWithFrame:(NSRect)frameRect;
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems;
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame;
 - (void)shouldMove:(NSInteger)value;
 - (id)verifyMove:(NSPoint)point;
+- (void)shouldResize:(NSInteger)value;
 - (NSInteger)move;
+- (NSInteger)resize;
 - (void) closeWindow;
 - (void) minimiseWindow;
 - (void) maximiseWindow;
@@ -64,6 +67,17 @@ LoqurWebView *webView;
     if (type == NSLeftMouseDown) [self mouseDown:event];
     else if (type == NSLeftMouseDragged) [self mouseDragged:event];
   }
+  else {
+    if ([webView resize]) {
+      NSRect frame = [self frame];
+      NSSize minSize = [self minSize];
+      NSLog(@"ms is %ld", minSize.height);
+      NSPoint currentLocation = [NSEvent mouseLocation];
+      frame.size.height = frame.size.height + (currentLocation.y - (frame.origin.y + frame.size.height - 100));
+      if (frame.size.height < minSize.height) frame.size.height = minSize.height;
+      [self setFrame:frame display:YES];
+    }
+  }
 }
 
 - (void)mouseDown:(NSEvent *)event {
@@ -85,9 +99,7 @@ LoqurWebView *webView;
 
 @interface WebFrameView (transparent)
 @end
-
 @implementation WebFrameView (transparent)
-
 - (BOOL)isOpaque {
   return NO;
 }
@@ -109,7 +121,7 @@ LoqurWebView *webView;
   [prefs setJavaScriptEnabled:YES];
   [prefs setPlugInsEnabled:NO];
   [prefs setPrivateBrowsingEnabled:YES];
-  //[self registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
+  [self registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
   return self;
 }
 - (BOOL)isOpaque {
@@ -136,7 +148,7 @@ LoqurWebView *webView;
   return NSDragOperationEvery;
 }
 - (void)draggingExited:(id <NSDraggingInfo>)sender {
-  [super draggingExisting:sender];
+  [super draggingExited:sender];
 }
 - (BOOL)prepareForDragOperation:(id <NSDraggingInfo>)sender  {
   [super prepareForDragOperation:sender];
@@ -169,15 +181,24 @@ LoqurWebView *webView;
   NSWindow *window = [self window];
   NSRect existingFrame = [window frame];
   NSSize maxSize = [window maxSize];
-  NSRect newFrame = NSMakeRect(existingFrame.origin.x, existingFrame.origin.y, maxSize.width, maxSize.height);
+  int yAdjustment = maxSize.height - existingFrame.size.height;
+  NSRect newFrame = NSMakeRect(existingFrame.origin.x, existingFrame.origin.y-yAdjustment, maxSize.width, maxSize.height);
   [window setFrame:newFrame display:true animate:true];
 }
+- (void)shouldResize:(NSInteger)value {
+  NSLog(@"here %ld", value);
+  resize = value;
+}
+- (NSInteger)resize {
+  return resize;
+}
 + (NSString*)webScriptNameForSelector:(SEL)sel {
-  if (sel == @selector(shouldMove:)) return @"shouldMove:";
+  if (sel == @selector(shouldMove:)) return @"shouldMove";
   if (sel == @selector(closeWindow)) return @"closeWindow";
   if (sel == @selector(minimiseWindow)) return @"minimiseWindow";
   if (sel == @selector(maximiseWindow)) return @"maximiseWindow";
   if (sel == @selector(showFileDialog)) return @"showFileDialog";
+  if (sel == @selector(shouldResize:)) return @"shouldResize";
   return nil;
 }
 + (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
@@ -186,6 +207,7 @@ LoqurWebView *webView;
   if (sel == @selector(minimiseWindow)) return NO;
   if (sel == @selector(maximiseWindow)) return NO;
   if (sel == @selector(showFileDialog)) return NO;
+  if (sel == @selector(shouldResize:)) return NO;
   return YES;
 }
 - (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
@@ -310,8 +332,8 @@ void windowInit() {
   [window setOpaque:NO];
   [window setHasShadow:true];
   [window setBackgroundColor:[NSColor clearColor]];
-  [window setContentMaxSize:NSMakeSize(MAX_WIDTH, MAX_HEIGHT)];
-  [window setContentMinSize:NSMakeSize(MIN_WIDTH, MIN_HEIGHT)];
+  [window setMaxSize:NSMakeSize(MAX_WIDTH, MAX_HEIGHT)];
+  [window setMinSize:NSMakeSize(MIN_WIDTH, MIN_HEIGHT)];
   webView = [[LoqurWebView alloc] initWithFrame:[window frame]];
   webView.autoresizesSubviews = YES;
   [window setDelegate:(id) [WindowDelegate alloc]];
