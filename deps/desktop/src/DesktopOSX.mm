@@ -3,10 +3,8 @@
 #import <ServiceManagement/ServiceManagement.h>
 #import "Desktop.h"
 
-#define INITIAL_WIDTH 700
-#define INITIAL_HEIGHT 500
-#define PADDING_LEFT_RIGT 50
-#define PADDING_TOP_BOTTOM 100
+#define INITIAL_WIDTH 850
+#define INITIAL_HEIGHT 650
 #define MAX_WIDTH 1200
 #define MAX_HEIGHT 1000
 #define MIN_WIDTH 600
