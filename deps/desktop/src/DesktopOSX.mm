@@ -9,6 +9,8 @@
 #define MAX_HEIGHT 1000
 #define MIN_WIDTH 600
 #define MIN_HEIGHT 400
+#define VERTICAL_MARGIN 100
+#define HORIZONTAL_MARGIN 50
 
 BOOL addSecurityBookmark (NSURL*url);
 void addFiles();
@@ -112,7 +114,7 @@ void addFiles();
 @synthesize resize;
 @synthesize webView;
 - (id)init {
-  self = [super initWithContentRect:NSMakeRect(50, 100, INITIAL_WIDTH, INITIAL_HEIGHT)
+  self = [super initWithContentRect:NSMakeRect(0, 0, INITIAL_WIDTH, INITIAL_HEIGHT)
     styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO];
   [self center];
   [[self windowController] setShouldCascadeWindows:NO];
@@ -164,14 +166,14 @@ void addFiles();
   float y = frame.origin.y;
 
   if (type == 1 || type == 5 || type == 6)
-    height = height + (currentLocation.y - (y + height - 100));
+    height = height + (currentLocation.y - (y + height - VERTICAL_MARGIN));
   if (type == 2 || type == 6 || type == 7)
-    width = width + (currentLocation.x - (x + width - 50));
+    width = width + (currentLocation.x - (x + width - HORIZONTAL_MARGIN));
   if (type == 3 || type == 7 || type == 8) {
-    height = height + (y - currentLocation.y + 100);
+    height = height + (y - currentLocation.y + VERTICAL_MARGIN);
     if (height != frame.size.height) {
       if (height <= maxSize.height && height >= minSize.height)
-        y = currentLocation.y - 100;
+        y = currentLocation.y - VERTICAL_MARGIN;
       else {
         if (height > maxSize.height)
           y = frame.origin.y - (maxSize.height - frame.size.height);
@@ -181,10 +183,10 @@ void addFiles();
     }
   }
   if (type == 4 || type == 5 || type == 8) {
-    width = width + (x - currentLocation.x + 50);
+    width = width + (x - currentLocation.x + HORIZONTAL_MARGIN);
     if (width != frame.size.width) {
       if (width <= maxSize.width && width >= minSize.width)
-        x = currentLocation.x - 50;
+        x = currentLocation.x - HORIZONTAL_MARGIN;
       else {
         if (width > maxSize.width)
           x = frame.origin.x - (maxSize.width - frame.size.width);
@@ -219,10 +221,10 @@ void addFiles();
 
   newOrigin.x = currentLocation.x - moveFrom.x;
   newOrigin.y = currentLocation.y - moveFrom.y;
-  if ((newOrigin.y + windowFrame.size.height - 100) >
+  if ((newOrigin.y + windowFrame.size.height - VERTICAL_MARGIN) >
     (screenFrame.origin.y + screenFrame.size.height))
       newOrigin.y = screenFrame.origin.y +
-        (screenFrame.size.height - (windowFrame.size.height - 100));
+        (screenFrame.size.height - (windowFrame.size.height - VERTICAL_MARGIN));
 
   [self setFrameOrigin:newOrigin];
 }
