@@ -78,16 +78,16 @@ LoqurWebView *webView;
       int width = frame.size.width;
       float x = frame.origin.x;
       float y = frame.origin.y;
-      if (resizeType == 1) height = height + (currentLocation.y - (y + height - 100));
-      else if (resizeType == 2) width = width + (currentLocation.x - (x + width - 50));
-      else if (resizeType == 3) {
+      if (resizeType == 1 || resizeType == 6 || resizeType == 5) height = height + (currentLocation.y - (y + height - 100));
+      if (resizeType == 2 || resizeType == 6 || resizeType == 7) width = width + (currentLocation.x - (x + width - 50));
+      if (resizeType == 3 || resizeType == 7 || resizeType == 8) {
         height = height + (y - currentLocation.y + 100);
         if ((height != frame.size.height) && (height < maxSize.height) && (height > minSize.height))
           y = currentLocation.y - 100;
         else
           height = frame.size.height;
       }
-      else if (resizeType == 4) {
+      if (resizeType == 4 || resizeType == 5 || resizeType == 8) {
         width = width + (x - currentLocation.x + 50);
         if ((width != frame.size.width) && (width < maxSize.width) && (width > minSize.width))
           x = currentLocation.x - 50;
