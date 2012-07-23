@@ -214,7 +214,6 @@ LoqurWebView *webView;
   [window setFrame:newFrame display:true animate:true];
 }
 - (void)shouldResize:(NSInteger)value {
-  NSLog(@"here %ld", value);
   resize = value;
 }
 - (NSInteger)resize {
