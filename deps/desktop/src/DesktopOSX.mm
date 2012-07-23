@@ -68,13 +68,41 @@ LoqurWebView *webView;
     else if (type == NSLeftMouseDragged) [self mouseDragged:event];
   }
   else {
-    if ([webView resize]) {
+    int resizeType = [webView resize];
+    if (resizeType) {
       NSRect frame = [self frame];
       NSSize minSize = [self minSize];
-      NSLog(@"ms is %ld", minSize.height);
+      NSSize maxSize = [self maxSize];
       NSPoint currentLocation = [NSEvent mouseLocation];
-      frame.size.height = frame.size.height + (currentLocation.y - (frame.origin.y + frame.size.height - 100));
-      if (frame.size.height < minSize.height) frame.size.height = minSize.height;
+      int height = frame.size.height;
+      int width = frame.size.width;
+      float x = frame.origin.x;
+      float y = frame.origin.y;
+      if (resizeType == 1) height = height + (currentLocation.y - (y + height - 100));
+      else if (resizeType == 2) width = width + (currentLocation.x - (x + width - 50));
+      else if (resizeType == 3) {
+        height = height + (y - currentLocation.y + 100);
+        if ((height != frame.size.height) && (height < maxSize.height) && (height > minSize.height))
+          y = currentLocation.y - 100;
+        else
+          height = frame.size.height;
+      }
+      else if (resizeType == 4) {
+        width = width + (x - currentLocation.x + 50);
+        if ((width != frame.size.width) && (width < maxSize.width) && (width > minSize.width))
+          x = currentLocation.x - 50;
+        else
+          width = frame.size.width;
+      }
+
+      if (height < minSize.height) height = minSize.height;
+      if (height > maxSize.height) height = maxSize.height;
+      if (width < minSize.width) width = minSize.width;
+      if (width > maxSize.width) width = maxSize.width;
+      frame.size.height = height;
+      frame.size.width = width;
+      frame.origin.x = x;
+      frame.origin.y = y;
       [self setFrame:frame display:YES];
     }
   }
