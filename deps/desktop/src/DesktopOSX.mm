@@ -41,13 +41,13 @@ NSWindow *w;
 LoqurWebView *webView;
 
 @interface LoqurWindow : NSWindow {
-  NSPoint initialLocation;
+  NSPoint moveFrom;
 }
-@property (assign) NSPoint initialLocation;
+@property (assign) NSPoint moveFrom;
 @end
 
 @implementation LoqurWindow
-@synthesize initialLocation;
+@synthesize moveFrom;
 - (BOOL)canBecomeMainWindow {
     return YES;
 }
@@ -56,85 +56,91 @@ LoqurWebView *webView;
 }
 - (void)sendEvent:(NSEvent *)event {
   [super sendEvent:event];
+
   NSEventType type = [event type];
   if (type == NSLeftMouseDown) {
-    [self mouseDown:event];
+    [self initMove:[event locationInWindow]];
     NSPoint locationInView = [webView convertPoint:[event locationInWindow] fromView:webView];
     locationInView.y = [self frame].size.height - locationInView.y;
     [webView shouldMove: [[webView verifyMove:locationInView] intValue]];
   }
-  else if ([webView move]) {
-    if (type == NSLeftMouseDown) [self mouseDown:event];
-    else if (type == NSLeftMouseDragged) [self mouseDragged:event];
-  }
-  else {
-    int resizeType = [webView resize];
-    if (resizeType) {
-      NSRect frame = [self frame];
-      NSSize minSize = [self minSize];
-      NSSize maxSize = [self maxSize];
-      NSPoint currentLocation = [NSEvent mouseLocation];
-
-      int height = frame.size.height;
-      int width = frame.size.width;
-      float x = frame.origin.x;
-      float y = frame.origin.y;
-
-      if (resizeType == 1 || resizeType == 5 || resizeType == 6) height = height + (currentLocation.y - (y + height - 100));
-      if (resizeType == 2 || resizeType == 6 || resizeType == 7) width = width + (currentLocation.x - (x + width - 50));
-      if (resizeType == 3 || resizeType == 7 || resizeType == 8) {
-        height = height + (y - currentLocation.y + 100);
-        if (height != frame.size.height) {
-          if (height <= maxSize.height && height >= minSize.height)
-            y = currentLocation.y - 100;
-          else {
-            if (height > maxSize.height)
-              y = frame.origin.y - (maxSize.height - frame.size.height);
-            else if (height < minSize.height)
-              y = frame.origin.y - (minSize.height - frame.size.height);
-          }
-        }
-      }
-      if (resizeType == 4 || resizeType == 5 || resizeType == 8) {
-        width = width + (x - currentLocation.x + 50);
-        if (width != frame.size.width) {
-          if (width <= maxSize.width && width >= minSize.width)
-            x = currentLocation.x - 50;
-          else {
-            if (width > maxSize.width)
-              x = frame.origin.x - (maxSize.width - frame.size.width);
-            else if (width < minSize.width)
-              x = frame.origin.x - (minSize.width - frame.size.width);
-          }
-        }
-      }
-
-      if (height < minSize.height) height = minSize.height;
-      if (height > maxSize.height) height = maxSize.height;
-      if (width < minSize.width) width = minSize.width;
-      if (width > maxSize.width) width = maxSize.width;
-      frame.size.height = height;
-      frame.size.width = width;
-      frame.origin.x = x;
-      frame.origin.y = y;
-      [self setFrame:frame display:YES];
+  else if (type == NSLeftMouseDragged) {
+    if ([webView move]) [self performMove];
+    else {
+      int resizeType = [webView resize];
+      if (resizeType) [self performResize:resizeType];
     }
   }
 }
+- (void)performResize:(NSInteger)type {
+  NSRect frame = [self frame];
+  NSSize minSize = [self minSize];
+  NSSize maxSize = [self maxSize];
+  NSPoint currentLocation = [NSEvent mouseLocation];
 
-- (void)mouseDown:(NSEvent *)event {
-  self.initialLocation = [event locationInWindow];
+  int height = frame.size.height;
+  int width = frame.size.width;
+  float x = frame.origin.x;
+  float y = frame.origin.y;
+
+  if (type == 1 || type == 5 || type == 6)
+    height = height + (currentLocation.y - (y + height - 100));
+  if (type == 2 || type == 6 || type == 7)
+    width = width + (currentLocation.x - (x + width - 50));
+  if (type == 3 || type == 7 || type == 8) {
+    height = height + (y - currentLocation.y + 100);
+    if (height != frame.size.height) {
+      if (height <= maxSize.height && height >= minSize.height)
+        y = currentLocation.y - 100;
+      else {
+        if (height > maxSize.height)
+          y = frame.origin.y - (maxSize.height - frame.size.height);
+        else if (height < minSize.height)
+          y = frame.origin.y - (minSize.height - frame.size.height);
+      }
+    }
+  }
+  if (type == 4 || type == 5 || type == 8) {
+    width = width + (x - currentLocation.x + 50);
+    if (width != frame.size.width) {
+      if (width <= maxSize.width && width >= minSize.width)
+        x = currentLocation.x - 50;
+      else {
+        if (width > maxSize.width)
+          x = frame.origin.x - (maxSize.width - frame.size.width);
+        else if (width < minSize.width)
+          x = frame.origin.x - (minSize.width - frame.size.width);
+      }
+    }
+  }
+  if (height < minSize.height) height = minSize.height;
+  if (height > maxSize.height) height = maxSize.height;
+  if (width < minSize.width) width = minSize.width;
+  if (width > maxSize.width) width = maxSize.width;
+
+  frame.size.height = height;
+  frame.size.width = width;
+  frame.origin.x = x;
+  frame.origin.y = y;
+  [self setFrame:frame display:YES];
 }
-- (void)mouseDragged:(NSEvent *)event {
+- (void)initMove:(NSPoint)point {
+  self.moveFrom = point;
+}
+- (void)performMove {
   NSPoint currentLocation;
   NSPoint newOrigin;
   NSRect  screenFrame = [[NSScreen mainScreen] visibleFrame];
   NSRect  windowFrame = [self frame];
   currentLocation = [NSEvent mouseLocation];
-  newOrigin.x = currentLocation.x - initialLocation.x;
-  newOrigin.y = currentLocation.y - initialLocation.y;
-  if ((newOrigin.y+windowFrame.size.height-100) > (screenFrame.origin.y+screenFrame.size.height))
-    newOrigin.y=screenFrame.origin.y + (screenFrame.size.height-(windowFrame.size.height-100));
+
+  newOrigin.x = currentLocation.x - moveFrom.x;
+  newOrigin.y = currentLocation.y - moveFrom.y;
+  if ((newOrigin.y + windowFrame.size.height - 100) >
+    (screenFrame.origin.y + screenFrame.size.height))
+      newOrigin.y = screenFrame.origin.y +
+        (screenFrame.size.height - (windowFrame.size.height - 100));
+
   [self setFrameOrigin:newOrigin];
 }
 @end
