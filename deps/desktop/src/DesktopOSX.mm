@@ -13,8 +13,6 @@
 BOOL addSecurityBookmark (NSURL*url);
 void addFiles();
 
-id window;
-
 @interface NSURLRequest (DummyInterface)
 + (BOOL)allowsAnyHTTPSCertificateForHost:(NSString*)host;
 + (void)setAllowsAnyHTTPSCertificate:(BOOL)allow forHost:(NSString*)host;
@@ -124,7 +122,7 @@ id window;
   [self setBackgroundColor:[NSColor clearColor]];
   [self setMaxSize:NSMakeSize(MAX_WIDTH, MAX_HEIGHT)];
   [self setMinSize:NSMakeSize(MIN_WIDTH, MIN_HEIGHT)];
-  webView = [[LoqurWebView alloc] initWithFrame:[window frame]];
+  webView = [[LoqurWebView alloc] initWithFrame:[self frame]];
   [self setDelegate:(id)self];
   NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
   [NSURLRequest setAllowsAnyHTTPSCertificate:YES forHost:[url host]];
@@ -254,7 +252,7 @@ id window;
   int yAdjustment = maxSize.height - existingFrame.size.height;
   NSRect newFrame = NSMakeRect(existingFrame.origin.x,
     existingFrame.origin.y - yAdjustment, maxSize.width, maxSize.height);
-  [self setFrame:newFrame display:true animate:true];
+  [self setFrame:newFrame display:YES animate:YES];
 }
 - (void)showFileDialog {
   addFiles();
@@ -370,15 +368,18 @@ void menuBarInit() {
 }
 
 void windowInit() {
-  window = [[LoqurWindow alloc] init];
-  while ([[window webView] isLoading]) {
+  id window = [[LoqurWindow alloc] init];
+  id webView = [window webView];
+  while ([webView isLoading]) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    [[window webView] setNeedsDisplay:NO];
-    [NSApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate dateWithTimeIntervalSinceNow:1.0] inMode:NSDefaultRunLoopMode dequeue:YES];
+    [webView setNeedsDisplay:NO];
+    [NSApp nextEventMatchingMask:NSAnyEventMask
+      untilDate:[NSDate dateWithTimeIntervalSinceNow:1.0]
+        inMode:NSDefaultRunLoopMode dequeue:YES];
     [pool drain];
   }
-  [[window webView] setNeedsDisplay:true];
-  [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"WebKitDeveloperExtras"];
+  [webView setNeedsDisplay:YES];
+  [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"WebKitDeveloperExtras"];
   [[NSUserDefaults standardUserDefaults] synchronize];
   [window makeKeyAndOrderFront:nil];
 }
