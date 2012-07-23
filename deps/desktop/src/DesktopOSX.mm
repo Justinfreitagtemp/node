@@ -13,41 +13,125 @@
 BOOL addSecurityBookmark (NSURL*url);
 void addFiles();
 
-NSWindow *window;
-NSWindow *w;
+id window;
 
 @interface NSURLRequest (DummyInterface)
 + (BOOL)allowsAnyHTTPSCertificateForHost:(NSString*)host;
 + (void)setAllowsAnyHTTPSCertificate:(BOOL)allow forHost:(NSString*)host;
 @end
 
-@interface LoqurWebView : WebView {
-  NSInteger move;
-  NSInteger resize;
+@interface WebFrameView (transparent)
+@end
+@implementation WebFrameView (transparent)
+- (BOOL)isOpaque {
+  return NO;
 }
-- (id)initWithFrame:(NSRect)frameRect;
-- (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems;
-- (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame;
-- (void)shouldMove:(NSInteger)value;
-- (id)verifyMove:(NSPoint)point;
-- (void)shouldResize:(NSInteger)value;
-- (NSInteger)move;
-- (NSInteger)resize;
-- (void) closeWindow;
-- (void) minimiseWindow;
-- (void) maximiseWindow;
 @end
 
-LoqurWebView *webView;
+@interface LoqurWebView : WebView
+@end
+@implementation LoqurWebView
+- (id)initWithFrame:(NSRect)frameRect {
+  self = [super initWithFrame:frameRect];
+  self.autoresizingMask = (NSViewHeightSizable | NSViewWidthSizable);
+  [[[self mainFrame] frameView] setAllowsScrolling:NO];
+  [self setFrameLoadDelegate:self];
+  [self setUIDelegate:self];
+  [self setEditingDelegate:self];
+  [self setMaintainsBackForwardList:NO];
+  [self setDrawsBackground:NO];
+  self.autoresizesSubviews = YES;
+  WebPreferences* prefs = [self preferences];
+  [prefs setAutosaves:NO];
+  [prefs setJavaEnabled:NO];
+  [prefs setJavaScriptEnabled:YES];
+  [prefs setPlugInsEnabled:NO];
+  [prefs setPrivateBrowsingEnabled:YES];
+  [self registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
+  return self;
+}
+- (BOOL)isOpaque {
+  return NO;
+}
+/*
+- (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems {
+  return nil;
+}
+*/
+- (NSUInteger)webView:(WebView *)sender dragDestinationActionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo {
+  return WebDragDestinationActionAny;
+}
+- (NSUInteger)webView:(WebView *)sender dragSourceActionMaskForPoint:(NSPoint)point {
+  return WebDragSourceActionAny;
+}
+- (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)sender{
+  [super draggingUpdated:sender];
+  return NSDragOperationEvery;
+}
+- (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender {
+  [super draggingEntered:sender];
+  return NSDragOperationEvery;
+}
+- (void)draggingExited:(id <NSDraggingInfo>)sender {
+  [super draggingExited:sender];
+}
+- (BOOL)prepareForDragOperation:(id <NSDraggingInfo>)sender  {
+  [super prepareForDragOperation:sender];
+  return YES;
+}
+- (BOOL)performDragOperation:(id <NSDraggingInfo>)sender {
+  [super performDragOperation:sender];
+  return YES;
+}
+- (void)concludeDragOperation:(id <NSDraggingInfo>)sender{
+  NSArray *draggedFilenames = [[sender draggingPasteboard] propertyListForType:NSFilenamesPboardType];
+  for (id filename in draggedFilenames) {
+    NSURL *url = [NSURL fileURLWithPath:filename];
+    addSecurityBookmark(url);
+  }
+}
+- (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
+  [windowScriptObject setValue:[self window] forKey:@"Window"];
+}
+@end
+
 
 @interface LoqurWindow : NSWindow {
+  NSInteger move;
   NSPoint moveFrom;
+  NSInteger resize;
+  WebView *webView;
 }
-@property (assign) NSPoint moveFrom;
+@property (assign) NSInteger move;
+@property (assign) NSPoint   moveFrom;
+@property (assign) NSInteger resize;
+@property (assign) WebView   *webView;
 @end
 
 @implementation LoqurWindow
+@synthesize move;
 @synthesize moveFrom;
+@synthesize resize;
+@synthesize webView;
+- (id)init {
+  self = [super initWithContentRect:NSMakeRect(50, 100, INITIAL_WIDTH, INITIAL_HEIGHT)
+    styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO];
+  [self center];
+  [[self windowController] setShouldCascadeWindows:NO];
+  [self setFrameAutosaveName:@"loqurWindow"];
+  [self setOpaque:NO];
+  [self setHasShadow:NO];
+  [self setBackgroundColor:[NSColor clearColor]];
+  [self setMaxSize:NSMakeSize(MAX_WIDTH, MAX_HEIGHT)];
+  [self setMinSize:NSMakeSize(MIN_WIDTH, MIN_HEIGHT)];
+  webView = [[LoqurWebView alloc] initWithFrame:[window frame]];
+  [self setDelegate:(id)self];
+  NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
+  [NSURLRequest setAllowsAnyHTTPSCertificate:YES forHost:[url host]];
+  [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:url]];
+  [self setContentView:webView];
+  return self;
+}
 - (BOOL)canBecomeMainWindow {
     return YES;
 }
@@ -62,17 +146,15 @@ LoqurWebView *webView;
     [self initMove:[event locationInWindow]];
     NSPoint locationInView = [webView convertPoint:[event locationInWindow] fromView:webView];
     locationInView.y = [self frame].size.height - locationInView.y;
-    [webView shouldMove: [[webView verifyMove:locationInView] intValue]];
+    [self shouldMove: [[self verifyMove:locationInView] intValue]];
   }
   else if (type == NSLeftMouseDragged) {
-    if ([webView move]) [self performMove];
-    else {
-      int resizeType = [webView resize];
-      if (resizeType) [self performResize:resizeType];
-    }
+    if (move) [self performMove];
+    else if (resize) [self performResize];
   }
 }
-- (void)performResize:(NSInteger)type {
+- (void)performResize {
+  NSInteger type = resize;
   NSRect frame = [self frame];
   NSSize minSize = [self minSize];
   NSSize maxSize = [self maxSize];
@@ -124,6 +206,9 @@ LoqurWebView *webView;
   frame.origin.y = y;
   [self setFrame:frame display:YES];
 }
+- (void)shouldResize:(NSInteger)value {
+  resize = value;
+}
 - (void)initMove:(NSPoint)point {
   self.moveFrom = point;
 }
@@ -143,140 +228,55 @@ LoqurWebView *webView;
 
   [self setFrameOrigin:newOrigin];
 }
-@end
-
-@interface WebFrameView (transparent)
-@end
-@implementation WebFrameView (transparent)
-- (BOOL)isOpaque {
-  return NO;
-}
-@end
-
-@implementation LoqurWebView
-- (id)initWithFrame:(NSRect)frameRect {
-  self = [super initWithFrame:frameRect];
-  self.autoresizingMask = (NSViewHeightSizable | NSViewWidthSizable);
-  [[[self mainFrame] frameView] setAllowsScrolling:NO];
-  [self setFrameLoadDelegate:self];
-  [self setUIDelegate:self];
-  [self setEditingDelegate:self];
-  [self setMaintainsBackForwardList:NO];
-  [self setDrawsBackground:NO];
-  WebPreferences* prefs = [self preferences];
-  [prefs setAutosaves:NO];
-  [prefs setJavaEnabled:NO];
-  [prefs setJavaScriptEnabled:YES];
-  [prefs setPlugInsEnabled:NO];
-  [prefs setPrivateBrowsingEnabled:YES];
-  [self registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, nil]];
-  return self;
-}
-- (BOOL)isOpaque {
-  return NO;
-}
-/*
-- (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems {
-  return nil;
-}
-*/
-- (NSUInteger)webView:(WebView *)sender dragDestinationActionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo {
-  return WebDragDestinationActionAny;
-}
-- (NSUInteger)webView:(WebView *)sender dragSourceActionMaskForPoint:(NSPoint)point {
-  return WebDragSourceActionAny;
-}
-
-- (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)sender{
-  [super draggingUpdated:sender];
-  return NSDragOperationEvery;
-}
-- (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender {
-  [super draggingEntered:sender];
-  return NSDragOperationEvery;
-}
-- (void)draggingExited:(id <NSDraggingInfo>)sender {
-  [super draggingExited:sender];
-}
-- (BOOL)prepareForDragOperation:(id <NSDraggingInfo>)sender  {
-  [super prepareForDragOperation:sender];
-  return YES;
-}
-- (BOOL)performDragOperation:(id <NSDraggingInfo>)sender {
-  [super performDragOperation:sender];
-  return YES;
-}
-- (void)concludeDragOperation:(id <NSDraggingInfo>)sender{
-  NSArray *draggedFilenames = [[sender draggingPasteboard] propertyListForType:NSFilenamesPboardType];
-  for (id filename in draggedFilenames) {
-    NSURL *url = [NSURL fileURLWithPath:filename];
-    addSecurityBookmark(url);
-  }
-}
-- (NSInteger)move {
-  return move;
-}
 - (void)shouldMove:(NSInteger)value {
   move = value;
+}
+- (id)verifyMove:(NSPoint)point {
+  NSArray *args = [NSArray arrayWithObjects:
+    [NSNumber numberWithInt:(NSInteger) point.x],
+      [NSNumber numberWithInt:(NSInteger) point.y], nil];
+  @try {
+    return [[webView windowScriptObject]
+      callWebScriptMethod:@"verifyMove" withArguments:args];
+  }
+  @catch (NSException *e) {}
+  return [NSNumber numberWithInt:0];
 }
 - (void)closeWindow {
   [[NSRunningApplication currentApplication] hide];
 }
 - (void)minimiseWindow {
-  [[self window] miniaturize:self];
+  [self miniaturize:self];
 }
 - (void)maximiseWindow {
-  NSWindow *window = [self window];
-  NSRect existingFrame = [window frame];
-  NSSize maxSize = [window maxSize];
+  NSRect existingFrame = [self frame];
+  NSSize maxSize = [self maxSize];
   int yAdjustment = maxSize.height - existingFrame.size.height;
-  NSRect newFrame = NSMakeRect(existingFrame.origin.x, existingFrame.origin.y-yAdjustment, maxSize.width, maxSize.height);
-  [window setFrame:newFrame display:true animate:true];
-}
-- (void)shouldResize:(NSInteger)value {
-  resize = value;
-}
-- (NSInteger)resize {
-  return resize;
-}
-+ (NSString*)webScriptNameForSelector:(SEL)sel {
-  if (sel == @selector(shouldMove:)) return @"shouldMove";
-  if (sel == @selector(closeWindow)) return @"closeWindow";
-  if (sel == @selector(minimiseWindow)) return @"minimiseWindow";
-  if (sel == @selector(maximiseWindow)) return @"maximiseWindow";
-  if (sel == @selector(showFileDialog)) return @"showFileDialog";
-  if (sel == @selector(shouldResize:)) return @"shouldResize";
-  return nil;
-}
-+ (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
-  if (sel == @selector(shouldMove:)) return NO;
-  if (sel == @selector(closeWindow)) return NO;
-  if (sel == @selector(minimiseWindow)) return NO;
-  if (sel == @selector(maximiseWindow)) return NO;
-  if (sel == @selector(showFileDialog)) return NO;
-  if (sel == @selector(shouldResize:)) return NO;
-  return YES;
-}
-- (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
-  [windowScriptObject setValue:self forKey:@"Cocoa"];
-}
-- (id)verifyMove:(NSPoint)point {
-  NSArray *args = [NSArray arrayWithObjects:[NSNumber numberWithInt:(NSInteger) point.x],[NSNumber numberWithInt:(NSInteger) point.y], nil];
-  @try {
-    return [[self windowScriptObject] callWebScriptMethod:@"verifyMove" withArguments:args];
-  }
-  @catch (NSException *e) {}
-  return [NSNumber numberWithInt:0];
+  NSRect newFrame = NSMakeRect(existingFrame.origin.x,
+    existingFrame.origin.y - yAdjustment, maxSize.width, maxSize.height);
+  [self setFrame:newFrame display:true animate:true];
 }
 - (void)showFileDialog {
   addFiles();
 }
-@end
-
-@interface WindowDelegate : NSObject
-@end
-
-@implementation WindowDelegate
++ (NSString*)webScriptNameForSelector:(SEL)sel {
+  if (sel == @selector(shouldMove:))    return @"shouldMove";
+  if (sel == @selector(closeWindow))    return @"closeWindow";
+  if (sel == @selector(minimiseWindow)) return @"minimiseWindow";
+  if (sel == @selector(maximiseWindow)) return @"maximiseWindow";
+  if (sel == @selector(showFileDialog)) return @"showFileDialog";
+  if (sel == @selector(shouldResize:))  return @"shouldResize";
+  return nil;
+}
++ (BOOL)isSelectorExcludedFromWebScript:(SEL)sel {
+  if (sel == @selector(shouldMove:))    return NO;
+  if (sel == @selector(closeWindow))    return NO;
+  if (sel == @selector(minimiseWindow)) return NO;
+  if (sel == @selector(maximiseWindow)) return NO;
+  if (sel == @selector(showFileDialog)) return NO;
+  if (sel == @selector(shouldResize:))  return NO;
+  return YES;
+}
 - (void)windowDidResignKey:(NSNotification *)notification {
   @try {
     [[webView windowScriptObject] callWebScriptMethod:@"windowLostFocus" withArguments:nil];
@@ -370,34 +370,14 @@ void menuBarInit() {
 }
 
 void windowInit() {
-  NSUInteger windowStyle = NSBorderlessWindowMask; //NSResizableWindowMask;
-  window = [[[LoqurWindow alloc] initWithContentRect:NSMakeRect(50, 100, INITIAL_WIDTH, INITIAL_HEIGHT)
-    styleMask:windowStyle backing:NSBackingStoreBuffered defer:NO] autorelease];
-  [window center];
-  [[window windowController] setShouldCascadeWindows:NO];
-  //[window setFrameAutosaveName:@"loqurWindow"];
-  [window setOpaque:NO];
-  [window setHasShadow:true];
-  [window setBackgroundColor:[NSColor clearColor]];
-  [window setMaxSize:NSMakeSize(MAX_WIDTH, MAX_HEIGHT)];
-  [window setMinSize:NSMakeSize(MIN_WIDTH, MIN_HEIGHT)];
-  webView = [[LoqurWebView alloc] initWithFrame:[window frame]];
-  webView.autoresizesSubviews = YES;
-  [window setDelegate:(id) [WindowDelegate alloc]];
-  NSURL *url = [NSURL URLWithString:@"https://linux-dev:8000"];
-  [NSURLRequest setAllowsAnyHTTPSCertificate:YES forHost:[url host]];
-  [[webView mainFrame] loadRequest:[NSURLRequest requestWithURL:url]];
-
-  [window setContentView:webView];
-
-  while ([webView isLoading]) {
+  window = [[LoqurWindow alloc] init];
+  while ([[window webView] isLoading]) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    [webView setNeedsDisplay:NO];
+    [[window webView] setNeedsDisplay:NO];
     [NSApp nextEventMatchingMask:NSAnyEventMask untilDate:[NSDate dateWithTimeIntervalSinceNow:1.0] inMode:NSDefaultRunLoopMode dequeue:YES];
     [pool drain];
   }
-  [window invalidateShadow];
-  [webView setNeedsDisplay:true];
+  [[window webView] setNeedsDisplay:true];
   [[NSUserDefaults standardUserDefaults] setBool:true forKey:@"WebKitDeveloperExtras"];
   [[NSUserDefaults standardUserDefaults] synchronize];
   [window makeKeyAndOrderFront:nil];
