@@ -58,7 +58,8 @@ void addFiles();
   return nil;
 }
 */
-- (NSUInteger)webView:(WebView *)sender dragDestinationActionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo {
+- (NSUInteger)webView:(WebView *)sender
+    dragDestinationActionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo {
   return WebDragDestinationActionAny;
 }
 - (NSUInteger)webView:(WebView *)sender dragSourceActionMaskForPoint:(NSPoint)point {
@@ -84,13 +85,15 @@ void addFiles();
   return YES;
 }
 - (void)concludeDragOperation:(id <NSDraggingInfo>)sender{
-  NSArray *draggedFilenames = [[sender draggingPasteboard] propertyListForType:NSFilenamesPboardType];
+  NSArray *draggedFilenames = [[sender draggingPasteboard]
+    propertyListForType:NSFilenamesPboardType];
   for (id filename in draggedFilenames) {
     NSURL *url = [NSURL fileURLWithPath:filename];
     addSecurityBookmark(url);
   }
 }
-- (void)webView:(WebView *)sender didClearWindowObject:(WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
+- (void)webView:(WebView *)sender didClearWindowObject:
+    (WebScriptObject *)windowScriptObject forFrame:(WebFrame *)frame {
   [windowScriptObject setValue:[self window] forKey:@"Window"];
 }
 @end
@@ -144,7 +147,8 @@ void addFiles();
   NSEventType type = [event type];
   if (type == NSLeftMouseDown) {
     [self initMove:[event locationInWindow]];
-    NSPoint locationInView = [webView convertPoint:[event locationInWindow] fromView:webView];
+    NSPoint locationInView = [webView convertPoint:[event locationInWindow]
+      fromView:webView];
     locationInView.y = [self frame].size.height - locationInView.y;
     [self shouldMove: [[self verifyMove:locationInView] intValue]];
   }
@@ -240,7 +244,7 @@ void addFiles();
       callWebScriptMethod:@"verifyMove" withArguments:args];
   }
   @catch (NSException *e) {}
-  return [NSNumber numberWithInt:0];
+  return [NSNumber numberWithInt:NO];
 }
 - (void)closeWindow {
   [[NSRunningApplication currentApplication] hide];
@@ -279,13 +283,15 @@ void addFiles();
 }
 - (void)windowDidResignKey:(NSNotification *)notification {
   @try {
-    [[webView windowScriptObject] callWebScriptMethod:@"windowLostFocus" withArguments:nil];
+    [[webView windowScriptObject] callWebScriptMethod:@"windowLostFocus"
+      withArguments:nil];
   }
   @catch (NSException *e) {}
 }
 - (void)windowDidBecomeKey:(NSNotification *)notification {
   @try {
-    [[webView windowScriptObject] callWebScriptMethod:@"windowGainedFocus" withArguments:nil];
+    [[webView windowScriptObject] callWebScriptMethod:@"windowGainedFocus"
+      withArguments:nil];
   }
   @catch (NSException *e) {}
 }
@@ -347,8 +353,10 @@ NSURL* getSecurityBookmark(NSURL* url) {
 }
 
 void statusBarInit() {
-  id statusItem = [[[NSStatusBar systemStatusBar] statusItemWithLength:NSSquareStatusItemLength] retain];
-  id defaultImage = [[NSImage new] initWithContentsOfFile:@"images/default.png"];
+  id statusItem = [[[NSStatusBar systemStatusBar]
+    statusItemWithLength:NSSquareStatusItemLength] retain];
+  NSString *imageName = [[NSBundle mainBundle] pathForResource:@"default" ofType:@"png"];
+  id defaultImage = [[NSImage new] initWithContentsOfFile:imageName];
   [statusItem setImage:defaultImage];
   [statusItem setHighlightMode:YES];
 }
@@ -376,7 +384,7 @@ void windowInit() {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     [webView setNeedsDisplay:NO];
     [NSApp nextEventMatchingMask:NSAnyEventMask
-      untilDate:[NSDate dateWithTimeIntervalSinceNow:1.0]
+      untilDate:[NSDate dateWithTimeIntervalSinceNow:1.0f]
         inMode:NSDefaultRunLoopMode dequeue:YES];
     [pool drain];
   }
